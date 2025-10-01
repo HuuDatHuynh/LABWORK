@@ -1,0 +1,87 @@
+// Push Button with Internal Pull-Up controlling an RGB LED 
+
+// In this original code: LED is ON when button is released 
+
+//                        LED is OFF when button is pressed 
+ 
+
+int pushButton = 2;   // Push button connected to digital pin 2 
+ 
+
+// --------------------------------------------- 
+
+// setup() runs ONCE when the Arduino is powered on or reset 
+
+// --------------------------------------------- 
+
+void setup() { 
+
+  // Start serial communication at 9600 bits per second 
+
+  // (for monitoring the button state in Serial Monitor) 
+
+  Serial.begin(9600); 
+ 
+
+  // Configure the push button pin as input with internal pull-up resistor 
+
+  // This means: 
+
+  //   - When button is NOT pressed → pin reads HIGH (pulled up to 5V internally) 
+
+  //   - When button IS pressed     → pin reads LOW  (connected to GND) 
+
+  pinMode(pushButton, INPUT_PULLUP); 
+
+ 
+
+  // Configure RGB LED pins as outputs 
+
+  pinMode(13, OUTPUT);   // Red LED pin 
+
+  pinMode(12, OUTPUT);   // Green LED pin 
+
+  pinMode(8, OUTPUT);    // Blue LED pin 
+
+} 
+ 
+
+// loop() runs repeatedly forever 
+ 
+
+void loop() { 
+
+  // Read the state of the push button: HIGH or LOW 
+
+  int buttonState = digitalRead(pushButton); 
+ 
+
+  // Print the current button state to the Serial Monitor 
+
+  Serial.print("buttonState = "); 
+
+  Serial.println(buttonState); 
+
+ 
+
+  // Small delay for stability and to avoid flooding Serial Monitor 
+
+  delay(1); 
+
+ 
+
+  // Write the button state directly to all three LED pins 
+
+  // When button is NOT pressed → buttonState = HIGH → LEDs turn ON 
+
+  // When button IS pressed     → buttonState = LOW  → LEDs turn OFF 
+
+  digitalWrite(13, buttonState);   // Red channel 
+
+  digitalWrite(12, buttonState);   // Green channel 
+
+  digitalWrite(8, buttonState);    // Blue channel 
+
+} 
+
+ 
