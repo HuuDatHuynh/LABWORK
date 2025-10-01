@@ -1,0 +1,107 @@
+// -------------------------------------------------------------- 
+
+// PB not pressed → Red + Green ON 
+
+// PB pressed     → Red + Blue ON 
+
+// -------------------------------------------------------------- 
+
+ 
+ 
+
+int pushButton = 2;    // Push button connected to digital pin 2 
+
+ 
+ 
+
+void setup() { 
+
+  // Start serial communication for debugging 
+
+  Serial.begin(9600); 
+
+ 
+ 
+
+  // Configure the push button with internal pull-up 
+
+  // - Button released → pin reads HIGH 
+
+  // - Button pressed  → pin reads LOW 
+
+  pinMode(pushButton, INPUT_PULLUP); 
+
+ 
+ 
+
+  // Set RGB LED pins as outputs 
+
+  pinMode(13, OUTPUT);    // Red channel 
+
+  pinMode(12, OUTPUT);    // Green channel 
+
+  pinMode(8, OUTPUT);     // Blue channel 
+
+} 
+
+ 
+ 
+
+void loop() { 
+
+  // Read button state 
+
+  int buttonState = digitalRead(pushButton); 
+
+ 
+ 
+
+  // Show button state in Serial Monitor 
+
+  Serial.print("buttonState = "); 
+
+  Serial.println(buttonState); 
+
+  delay(1);  // Small delay for stability 
+
+ 
+ 
+
+  // -------------------------------------------------------------- 
+
+  // Using ! (NOT) to invert buttonState: 
+
+  //   buttonState  → HIGH when not pressed 
+
+  //   !buttonState → HIGH when pressed 
+
+  // -------------------------------------------------------------- 
+
+ 
+ 
+
+  // Red is always ON (both cases) 
+
+  digitalWrite(13, HIGH); 
+
+ 
+ 
+
+  // Green is ON when button is NOT pressed 
+
+  // (so we use buttonState directly) 
+
+  digitalWrite(12, buttonState); 
+
+ 
+ 
+
+  // Blue is ON when button IS pressed 
+
+  // (so we use the inverted state !buttonState) 
+
+  digitalWrite(8, !buttonState); 
+
+} 
+
+ 
