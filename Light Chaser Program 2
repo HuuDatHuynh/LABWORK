@@ -1,0 +1,143 @@
+// 2-Direction Light Chaser 
+
+// LEDs connected to Arduino pins 13, 12, 8, and 7 
+
+// The lights chase forward (13 => 12 => 8 => 7) and then backward (8 => 12 => 13) 
+
+ 
+ 
+
+int led1 = 13;   // First LED (start of forward direction) 
+
+int led2 = 12;   // Second LED 
+
+int led3 = 8;    // Third LED 
+
+int led4 = 7;    // Fourth LED (end of forward direction) 
+
+ 
+ 
+
+int delayTime = 1000;   // time each LED stays ON (milliseconds) 
+
+ 
+ 
+
+void setup() { 
+
+  // --- Set each pin as OUTPUT --- 
+
+  pinMode(led1, OUTPUT); 
+
+  pinMode(led2, OUTPUT); 
+
+  pinMode(led3, OUTPUT); 
+
+  pinMode(led4, OUTPUT); 
+
+} 
+
+ 
+ 
+
+void loop() { 
+
+  // ---------- Forward direction ---------- 
+
+   
+
+  // Step 1: Turn ON LED1 
+
+  digitalWrite(led1, HIGH); 
+
+  digitalWrite(led2, LOW); 
+
+  digitalWrite(led3, LOW); 
+
+  digitalWrite(led4, LOW); 
+
+  delay(delayTime); 
+
+ 
+ 
+
+  // Step 2: Turn ON LED2 
+
+  digitalWrite(led1, LOW); 
+
+  digitalWrite(led2, HIGH); 
+
+  digitalWrite(led3, LOW); 
+
+  digitalWrite(led4, LOW); 
+
+  delay(delayTime); 
+
+ 
+ 
+
+  // Step 3: Turn ON LED3 
+
+  digitalWrite(led1, LOW); 
+
+  digitalWrite(led2, LOW); 
+
+  digitalWrite(led3, HIGH); 
+
+  digitalWrite(led4, LOW); 
+
+  delay(delayTime); 
+
+ 
+ 
+
+  // Step 4: Turn ON LED4 
+
+  digitalWrite(led1, LOW); 
+
+  digitalWrite(led2, LOW); 
+
+  digitalWrite(led3, LOW); 
+
+  digitalWrite(led4, HIGH); 
+
+  delay(delayTime); 
+
+ 
+ 
+
+  // ---------- Backward direction ---------- 
+
+ 
+ 
+
+  // Step 5: Turn ON LED3 (going back) 
+
+  digitalWrite(led1, LOW); 
+
+  digitalWrite(led2, LOW); 
+
+  digitalWrite(led3, HIGH); 
+
+  digitalWrite(led4, LOW); 
+
+  delay(delayTime); 
+
+ 
+ 
+
+  // Step 6: Turn ON LED2 
+
+  digitalWrite(led1, LOW); 
+
+  digitalWrite(led2, HIGH); 
+
+  digitalWrite(led3, LOW); 
+
+  digitalWrite(led4, LOW); 
+
+  delay(delayTime); 
+
+  // Loop starts over 
+
+} 
