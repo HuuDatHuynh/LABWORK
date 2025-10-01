@@ -1,0 +1,47 @@
+// 2-Direction RGB LED Light Chaser
+// Using pins 13 (Red), 12 (Green), 8 (Blue)
+
+int redPin   = 13;   // Red channel
+int greenPin = 12;   // Green channel
+int bluePin  = 8;    // Blue channel
+
+int delayTime = 1000;       // delay between steps in milliseconds
+
+void setup() {
+  // Set all RGB pins as OUTPUT
+  pinMode(redPin, OUTPUT);
+  pinMode(greenPin, OUTPUT);
+  pinMode(bluePin, OUTPUT);
+}
+
+void loop() {
+  // -------- Forward direction --------
+  
+  // Step 1: Red ON
+  digitalWrite(redPin, HIGH);
+  digitalWrite(greenPin, LOW);
+  digitalWrite(bluePin, LOW);
+  delay(delayTime);
+
+  // Step 2: Green ON
+  digitalWrite(redPin, LOW);
+  digitalWrite(greenPin, HIGH);
+  digitalWrite(bluePin, LOW);
+  delay(delayTime);
+
+  // Step 3: Blue ON
+  digitalWrite(redPin, LOW);
+  digitalWrite(greenPin, LOW);
+  digitalWrite(bluePin, HIGH);
+  delay(delayTime);
+
+  // -------- Backward direction --------
+  
+  // Step 4: Green ON again (reverse direction)
+  digitalWrite(redPin, LOW);
+  digitalWrite(greenPin, HIGH);
+  digitalWrite(bluePin, LOW);
+  delay(delayTime);
+
+  // Loop repeats automatically
+}
