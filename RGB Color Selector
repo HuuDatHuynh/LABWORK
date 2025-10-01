@@ -1,0 +1,28 @@
+void setup() { 
+
+  // Set RGB pins as OUTPUT 
+
+  pinMode(11, OUTPUT);  // Red 
+
+  pinMode(10, OUTPUT);  // Green 
+
+  pinMode(2, OUTPUT);   // Blue 
+
+} 
+
+ 
+ 
+
+void loop() { 
+
+  // Write PWM values to each channel (0-255) 
+
+  analogWrite(11, 15);   // Red: very dim 
+
+  analogWrite(10, 227);  // Green: bright 
+
+  analogWrite(2, 40);    // Blue: dim 
+
+} 
+
+ 
