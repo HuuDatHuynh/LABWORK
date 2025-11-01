@@ -1,240 +1,110 @@
 
-#include <LiquidCrystal.h>  
+#include <LiquidCrystal.h>  // Include LCD library to control the display
 
 // === LCD CONNECTIONS === 
-
 // RS → 12, E → 11, D4 → 5, D5 → 4, D6 → 3, D7 → 2  
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  // Create LCD object and define control/data pins
 
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  
+#include <Adafruit_Sensor.h>  // Include Adafruit unified sensor base library
+#include <DHT.h>              // Include DHT sensor library
+#include <DHT_U.h>            // Include DHT unified sensor driver
 
-#include <Adafruit_Sensor.h> 
+#define DHTPIN 7              // Define Arduino pin connected to DHT sensor signal pin
+#define DHTTYPE DHT11         // Define the DHT sensor type (DHT11 used here)
 
-#include <DHT.h> 
+DHT_Unified dht(DHTPIN, DHTTYPE);  // Create a DHT sensor object using unified interface
 
-#include <DHT_U.h> 
-
-#define DHTPIN 7     // Digital pin connected to the DHT sensor  
-
-// Feather HUZZAH ESP8266 note: use pins 3, 4, 5, 12, 13 or 14 -- 
-
-// Pin 15 can work but DHT must be disconnected during program upload. 
-
-// Uncomment the type of sensor in use: 
-
-#define DHTTYPE    DHT11     // DHT 11 
-
-//#define DHTTYPE    DHT22     // DHT 22 (AM2302) 
-
-//#define DHTTYPE    DHT21     // DHT 21 (AM2301) 
-
-// See guide for details on sensor wiring and usage: 
-
-//   https://learn.adafruit.com/dht/overview 
-
- 
-
-DHT_Unified dht(DHTPIN, DHTTYPE); 
-
- 
-
-uint32_t delayMS; 
+uint32_t delayMS;             // Variable to hold delay time between readings
 
 // Custom degree symbol (°)  
- 
-
-byte degreeSymbol[8] = {  
-
- 
-
-  B00110, //   **  
- 
-
-  B00110, //   **  
-
- 
-
-  B00000, //   
-
- 
-
-  B00000, //  
-
- 
-
-  B00000, //  
- 
-
-  B00000, //  
- 
-
-  B00000, //  
- 
-
-  B00000  //  
- 
-
-};  
-
-void setup() { 
-
-  lcd.createChar(0, degreeSymbol); 
-
-  lcd.begin(16, 2); 
-
-  Serial.begin(9600); 
-
-  // Initialize device. 
-
-  dht.begin(); 
-
-  Serial.println(F("DHTxx Unified Sensor Example")); 
-
-  // Print temperature sensor details. 
-
-  sensor_t sensor; 
-
-  dht.temperature().getSensor(&sensor); 
-
-  Serial.println(F("------------------------------------")); 
-
-  Serial.println(F("Temperature Sensor")); 
-
-  Serial.print  (F("Sensor Type: ")); Serial.println(sensor.name); 
-
-  Serial.print  (F("Driver Ver:  ")); Serial.println(sensor.version); 
-
-  Serial.print  (F("Unique ID:   ")); Serial.println(sensor.sensor_id); 
-
-  Serial.print  (F("Max Value:   ")); Serial.print(sensor.max_value); Serial.println(F("°C")); 
-
-  Serial.print  (F("Min Value:   ")); Serial.print(sensor.min_value); Serial.println(F("°C")); 
-
-  Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("°C")); 
-
-  Serial.println(F("------------------------------------")); 
-
-  // Print humidity sensor details. 
-
-  dht.humidity().getSensor(&sensor); 
-
-  Serial.println(F("Humidity Sensor")); 
-
-  Serial.print  (F("Sensor Type: ")); Serial.println(sensor.name); 
-
-  Serial.print  (F("Driver Ver:  ")); Serial.println(sensor.version); 
-
-  Serial.print  (F("Unique ID:   ")); Serial.println(sensor.sensor_id); 
-
-  Serial.print  (F("Max Value:   ")); Serial.print(sensor.max_value); Serial.println(F("%")); 
-
-  Serial.print  (F("Min Value:   ")); Serial.print(sensor.min_value); Serial.println(F("%")); 
-
-  Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("%")); 
-
-  Serial.println(F("------------------------------------")); 
-
-  // Set delay between sensor readings based on sensor details. 
-
-  delayMS = sensor.min_delay / 1000; 
-
-} 
-
- 
- 
-
-void loop() { 
-
-  // Delay between measurements. 
-
-  delay(delayMS); 
-
-  // Get temperature event and print its value. 
-
-  sensors_event_t event; 
-
-  dht.temperature().getEvent(&event); 
-
-  if (isnan(event.temperature)) { 
-
-    Serial.println(F("Error reading temperature!")); 
-
-  } 
-
-  else { 
-
-    Serial.print(F("Temperature: ")); 
-
-    Serial.print(event.temperature); 
-
-    Serial.println(F("°C")); 
-
-  } 
-
-  lcd.setCursor(0, 0); 
-
-  // Delay between measurements. 
-
-  if (isnan(event.temperature)) { 
-
-    lcd.println(F("Error reading temperature!")); 
-
-  } 
-
-  else { 
-
-    lcd.print(F("Temp: ")); 
-
-    lcd.print(event.temperature); 
-
-    lcd.write(byte(0)); 
-
-    lcd.print(F("C")); 
-
-  } 
-
-  // Get humidity event and print its value. 
-
-  dht.humidity().getEvent(&event); 
-
-  if (isnan(event.relative_humidity)) { 
-
-    Serial.println(F("Error reading humidity!")); 
-
-  } 
-
-  else { 
-
-    Serial.print(F("Humidity: ")); 
-
-    Serial.print(event.relative_humidity); 
-
-    Serial.println(F("%")); 
-
-  } 
-
-  lcd.setCursor(0, 1);  
-
-  // Get humidity event and print its value. 
-
-  dht.humidity().getEvent(&event); 
-
-  if (isnan(event.relative_humidity)) { 
-
-    lcd.println(F("Error reading humidity!")); 
-
-  } 
-
-  else { 
-
-    lcd.print(F("Humidity: ")); 
-
-    lcd.print(event.relative_humidity); 
-
-    lcd.print(F("%")); 
-
-  } 
-
-} 
+byte degreeSymbol[8] = {      // Create custom character pattern for degree symbol
+  B00110,
+  B00110,
+  B00000,
+  B00000,
+  B00000,
+  B00000,
+  B00000,
+  B00000
+};
+
+void setup() {
+  lcd.createChar(0, degreeSymbol);   // Store the custom degree symbol in LCD memory slot 0
+  lcd.begin(16, 2);                  // Initialize LCD with 16 columns and 2 rows
+  Serial.begin(9600);                // Start serial communication for debugging
+  dht.begin();                       // Initialize DHT sensor
+
+  Serial.println(F("DHTxx Unified Sensor Example"));  // Print title to serial monitor
+
+  sensor_t sensor;                   // Create a sensor_t structure to hold sensor details
+
+  dht.temperature().getSensor(&sensor);  // Get temperature sensor characteristics
+  Serial.println(F("------------------------------------"));
+  Serial.println(F("Temperature Sensor"));
+  Serial.print(F("Sensor Type: ")); Serial.println(sensor.name);
+  Serial.print(F("Driver Ver:  ")); Serial.println(sensor.version);
+  Serial.print(F("Unique ID:   ")); Serial.println(sensor.sensor_id);
+  Serial.print(F("Max Value:   ")); Serial.print(sensor.max_value); Serial.println(F("°C"));
+  Serial.print(F("Min Value:   ")); Serial.print(sensor.min_value); Serial.println(F("°C"));
+  Serial.print(F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("°C"));
+  Serial.println(F("------------------------------------"));
+
+  dht.humidity().getSensor(&sensor); // Get humidity sensor characteristics
+  Serial.println(F("Humidity Sensor"));
+  Serial.print(F("Sensor Type: ")); Serial.println(sensor.name);
+  Serial.print(F("Driver Ver:  ")); Serial.println(sensor.version);
+  Serial.print(F("Unique ID:   ")); Serial.println(sensor.sensor_id);
+  Serial.print(F("Max Value:   ")); Serial.print(sensor.max_value); Serial.println(F("%"));
+  Serial.print(F("Min Value:   ")); Serial.print(sensor.min_value); Serial.println(F("%"));
+  Serial.print(F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("%"));
+  Serial.println(F("------------------------------------"));
+
+  delayMS = sensor.min_delay / 1000; // Calculate required delay between readings (in ms)
+}
+
+void loop() {
+  delay(delayMS);                    // Wait between sensor readings
+
+  sensors_event_t event;             // Create an event structure to store sensor data
+  dht.temperature().getEvent(&event); // Request a temperature measurement
+
+  if (isnan(event.temperature)) {     // Check if temperature reading failed
+    Serial.println(F("Error reading temperature!"));
+  } else {
+    Serial.print(F("Temperature: "));
+    Serial.print(event.temperature);
+    Serial.println(F("°C"));
+  }
+
+  lcd.setCursor(0, 0);               // Position cursor on first LCD line
+  if (isnan(event.temperature)) {     // If temperature read failed
+    lcd.println(F("Error reading temperature!"));
+  } else {                            // Otherwise display temperature
+    lcd.print(F("Temp: "));
+    lcd.print(event.temperature);
+    lcd.write(byte(0));               // Print custom degree symbol
+    lcd.print(F("C"));
+  }
+
+  dht.humidity().getEvent(&event);    // Request a humidity measurement
+  if (isnan(event.relative_humidity)) {  // Check if humidity reading failed
+    Serial.println(F("Error reading humidity!"));
+  } else {
+    Serial.print(F("Humidity: "));
+    Serial.print(event.relative_humidity);
+    Serial.println(F("%"));
+  }
+
+  lcd.setCursor(0, 1);                // Move cursor to second LCD line
+  dht.humidity().getEvent(&event);    // Get humidity event again for LCD output
+  if (isnan(event.relative_humidity)) {
+    lcd.println(F("Error reading humidity!"));
+  } else {
+    lcd.print(F("Humidity: "));
+    lcd.print(event.relative_humidity);
+    lcd.print(F("%"));
+  }
+}
 
  
  
