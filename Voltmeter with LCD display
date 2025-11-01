@@ -1,0 +1,31 @@
+// include the library code:
+#include <LiquidCrystal.h>   // Include the LiquidCrystal library for LCD control
+
+float m = 1.0;   // Slope for calibration (used if sensor scaling is needed)
+float b = 0.0;   // Intercept for calibration (offset value)
+
+// initialize the library by associating any needed LCD interface pin 
+// with the Arduino pin number it is connected to 
+const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;  // Define LCD pin connections
+
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);  // Create an LCD object using the defined pins
+
+void setup() { 
+  lcd.begin(16, 2);    // Initialize the LCD with 16 columns and 2 rows
+  Serial.begin(9600);  // Start serial communication at 9600 baud for debugging
+} 
+
+void loop() { 
+  int sensorValue = analogRead(A0);    // Read analog voltage from pin A0 (0–1023 range)
+
+  float voltage = sensorValue * (5.0 / 1023.0);  // Convert ADC reading to voltage (0–5V)
+
+  float y = m * voltage + b;   // Apply calibration equation to the voltage reading
+
+  lcd.setCursor(1, 1);   // Set LCD cursor to column 1, row 1 (second row)
+  lcd.print("voltage="); // Display the text "voltage=" on the LCD
+  lcd.print(y);           // Display the measured voltage value
+  lcd.print(" V");        // Display the voltage unit "V"
+  
+  delay(1000);            // Wait 1 second before next reading
+}
