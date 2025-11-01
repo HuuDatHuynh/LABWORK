@@ -1,92 +1,56 @@
-
-#include <LiquidCrystal.h>  
+#include <LiquidCrystal.h>  // Include the LCD library to control a character LCD
 
 // === LCD CONNECTIONS === 
-
 // RS → 12, E → 11, D4 → 5, D5 → 4, D6 → 3, D7 → 2  
-
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  // Create LCD object and define control/data pins
 
 // === SETTINGS ===  
-
-const int analogPin = A0;        // Voltage divider input pin  
-
-const float Vin = 4.08;          // Actual 5V measured with multimeter  
-
-const float R1 = 10020.0;         // Measured reference resistor (Ohms)  
-
-const float calibrationFactor = 1.1; // Fine tune (e.g. 1.05 = +5% correction)  
+const int analogPin = A0;        // Analog pin where voltage divider output is connected
+const float Vin = 4.08;          // Actual supply voltage (measured with multimeter)
+const float R1 = 10020.0;        // Known reference resistor value in ohms
+const float calibrationFactor = 1.1; // Adjustment factor to fine-tune accuracy
 
 // === CUSTOM OHM SYMBOL ===  
-
-byte ohmSymbol[8] = {  
-
-  B00000,  
-
-  B01110,  
-
-  B10001,  
-
-  B10001,  
-
-  B10001,  
-
-  B01010,  
-
-  B11011,  
-
-  B00000  
-
-};  
+byte ohmSymbol[8] = {            // Define a custom character bitmap for the Ω symbol
+  B00000,
+  B01110,
+  B10001,
+  B10001,
+  B10001,
+  B01010,
+  B11011,
+  B00000
+};
 
 void setup() {  
-
-  lcd.begin(16, 2); 
-
-  lcd.createChar(0, ohmSymbol);  
-
+  lcd.begin(16, 2);              // Initialize the LCD with 16 columns and 2 rows
+  lcd.createChar(0, ohmSymbol);  // Store the custom Ω symbol in LCD memory slot 0
 }  
 
 void loop() {  
+  int raw = analogRead(analogPin);          // Read analog input (0–1023 from A0)
+  float Vout = (raw * Vin) / 1023.0;        // Convert ADC reading to voltage
+  float Rx = R1 * (Vout / (Vin - Vout));    // Compute unknown resistance using voltage divider formula
+  float R = Rx * calibrationFactor;         // Apply calibration correction for accuracy
 
-  int raw = analogRead(analogPin);  
+  lcd.setCursor(0, 0);                      // Set LCD cursor to start of first row
+  lcd.print("R = ");                        // Display label “R = ”
 
-  float Vout = (raw * Vin) / 1023.0;                // Convert ADC value to voltage  
+  lcd.setCursor(4, 0);                      // Move cursor right after “R = ”
 
-  float Rx = R1 * (Vout / (Vin - Vout));            // Calculate unknown resistance  
+  if (R < 1000) {                           // If resistance is less than 1kΩ
+    lcd.print(R, 1);                        // Print resistance with 1 decimal place
+    lcd.write(byte(0));                     // Display custom Ω symbol
+  } else if (R < 1000000) {                 // If resistance is less than 1MΩ
+    lcd.print(R / 1000.0, 2);               // Convert to kilo-ohms and print with 2 decimals
+    lcd.print("k");                         // Print 'k' to indicate kilo-ohms
+    lcd.write(byte(0));                     // Print Ω symbol
+  } else {                                  // For resistances 1MΩ or higher
+    lcd.print(R / 1000000.0, 2);            // Convert to mega-ohms and print with 2 decimals
+    lcd.print("M");                         // Print 'M' to indicate mega-ohms
+    lcd.write(byte(0));                     // Print Ω symbol
+  }
 
-  float R = Rx * calibrationFactor;                          // Apply calibration correction  
+  delay(1000);                              // Wait 1 second before updating again
+}
 
-  lcd.setCursor(0, 0);  
-
-  lcd.print("R = ");  
-
-  lcd.setCursor(4, 0);  
-
-  if (R < 1000) {  
-
-    lcd.print(R, 1);  
-
-    lcd.write(byte(0));                             // Print Ω symbol  
-
-  } else if (R < 1000000) {  
-
-    lcd.print(R / 1000.0, 2);  
-
-    lcd.print("k");  
-
-    lcd.write(byte(0));  
-
-  } else {  
-
-    lcd.print(R / 1000000.0, 2);  
-
-    lcd.print("M");  
-
-    lcd.write(byte(0));  
-
-  }  
-
-  delay(1000);  
-
-}  
