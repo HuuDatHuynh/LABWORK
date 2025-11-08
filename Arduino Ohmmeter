@@ -89,11 +89,9 @@ void loop() {
  
  
 
-  Serial.print("Raw ADC: ");                    // Print raw ADC value 
 
-  Serial.print(rawValue); 
 
-  Serial.print("  |  Resistance: ");           // Print resistance label 
+  Serial.print("Resistance: ");           // Print resistance label 
 
   Serial.print(R_unknown);                  // Print resistance in ohms 
 
