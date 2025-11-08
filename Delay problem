@@ -1,0 +1,58 @@
+/*
+  ------------------------------------------------------------
+  Program: Delay problem
+  ------------------------------------------------------------
+  ▪ Goal:
+    Blink an LED at a fixed interval while simultaneously reading
+    a pushbutton state and printing it to the Serial Monitor,
+    without using the blocking delay() function.
+
+  ▪ Main Theme:
+    Demonstrates non-blocking timing using millis() and
+    handling multiple tasks (LED blink + button read) efficiently.
+
+  ▪ Hardware Setup (Using External Pull-Down Resistor):
+    - LED → Digital pin 13 (through 220Ω resistor to GND)
+    - Pushbutton:
+        * One side → 5V
+        * Other side → Digital pin 2
+        * 10kΩ resistor between pin 2 and GND (pull-down)
+  ------------------------------------------------------------
+*/
+
+const int ledPin = 13;        // Pin for LED
+const int buttonPin = 2;      // Pin for pushbutton (with external pull-down)
+const unsigned long interval = 500; // LED blink interval (ms)
+
+unsigned long previousMillis = 0;   // Store last LED toggle time
+bool ledState = LOW;                // Current LED state
+
+void setup() {
+  pinMode(ledPin, OUTPUT);          // Set LED pin as output
+  pinMode(buttonPin, INPUT);        // Use external pull-down, so just INPUT
+  Serial.begin(9600);               // Initialize Serial Monitor
+}
+
+void loop() {
+  unsigned long currentMillis = millis();  // Get current time in ms
+
+  // === Non-blocking LED blink ===
+  if (currentMillis - previousMillis >= interval) {  // Check if interval passed
+    previousMillis = currentMillis;                  // Update last toggle time
+    ledState = !ledState;                            // Toggle LED state
+    digitalWrite(ledPin, ledState);                  // Turn LED on/off
+  }
+
+  // === Read pushbutton state ===
+  int buttonState = digitalRead(buttonPin);          // Read digital input (0 or 1)
+
+  // Print pushbutton state to Serial Monitor
+  Serial.print("Pushbutton: ");
+  if (buttonState == HIGH) {
+    Serial.println("Pressed");
+  } else {
+    Serial.println("Released");
+  }
+
+  delay(100);  // Short pause for readability (optional, not critical)
+}
