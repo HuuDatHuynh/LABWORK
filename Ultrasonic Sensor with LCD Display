@@ -1,0 +1,188 @@
+/* 
+
+  ------------------------------------------------------------ 
+
+  Program: Ultrasonic Sensor with LCD Display 
+
+  ------------------------------------------------------------ 
+
+  ▪ Goal: 
+
+    This program measures the distance of an object using an ultrasonic 
+
+    sensor (HC-SR04) and displays the result on a 16x2 LCD display. 
+
+ 
+ 
+
+  ▪ Main Theme: 
+
+    The project demonstrates how to use an ultrasonic sensor to measure 
+
+    distance and how to interface it with an LCD to display real-time 
+
+    readings. It includes serial output for debugging and basic range 
+
+    validation. 
+
+  ------------------------------------------------------------ 
+
+*/ 
+
+ 
+ 
+
+#include <LiquidCrystal.h>  // Include the LCD library to control the 16x2 LCD 
+
+ 
+ 
+
+// Define LCD pin connections to Arduino 
+
+const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2; 
+
+ 
+ 
+
+// Initialize the LCD object with the pin connections 
+
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7); 
+
+ 
+ 
+
+// Define pins for the ultrasonic sensor 
+
+#define trigPin 10   // Trigger pin sends sound pulses 
+
+#define echoPin 13   // Echo pin receives the reflected signal 
+
+ 
+ 
+
+// Variables to store distance readings 
+
+float smoothDistance = 0; // (not used in this version but can be used for smoothing) 
+
+float duration, distance; // Variables to store pulse duration and calculated distance 
+
+ 
+ 
+
+void setup() { 
+
+  lcd.begin(16, 2);          // Initialize the LCD (16 columns, 2 rows) 
+
+  Serial.begin(9600);        // Start serial communication at 9600 baud rate 
+
+  pinMode(trigPin, OUTPUT);  // Set the trigger pin as an output 
+
+  pinMode(echoPin, INPUT);   // Set the echo pin as an input 
+
+} 
+
+ 
+ 
+
+void loop() { 
+
+  // Send a short 10µs pulse to trigger the ultrasonic sensor 
+
+  digitalWrite(trigPin, LOW);       // Ensure trigger pin is LOW 
+
+  delayMicroseconds(2);             // Wait for 2 microseconds 
+
+  digitalWrite(trigPin, HIGH);      // Send HIGH pulse to start measurement 
+
+  delayMicroseconds(10);            // Keep it HIGH for 10 microseconds 
+
+  digitalWrite(trigPin, LOW);       // Set it LOW again 
+
+ 
+ 
+
+  // Measure the time it takes for the echo to return 
+
+  duration = pulseIn(echoPin, 1, 300000);  // Reads echo pulse duration (timeout: 300ms) 
+
+ 
+ 
+
+  // Calculate the distance in cm using the formula: distance = (time * speed of sound)/2 
+
+  distance = (duration / 2) * 0.0343;  // Speed of sound = 0.0343 cm/µs 
+
+ 
+ 
+
+  // Print distance to Serial Monitor 
+
+  Serial.print("Distance = "); 
+
+  if (distance >= 400 || distance <= 2) {  // Check if measurement is within sensor range 
+
+    Serial.println("Out of range");        // Display message if out of range 
+
+  }  
+
+  else { 
+
+    Serial.print(distance);                // Print distance value 
+
+    Serial.println(" cm");                 // Print unit 
+
+    delay(500);                            // Wait 0.5 seconds before next reading 
+
+  } 
+
+ 
+ 
+
+  delay(500);                              // Extra delay for stability 
+
+ 
+ 
+
+  // Display distance on the LCD 
+
+  lcd.setCursor(0, 0);                     // Set cursor to first row, first column 
+
+  lcd.print("Distance =");                 // Display label 
+
+ 
+ 
+
+  if (distance >= 400 || distance <= 2) {  // Check if value is out of range 
+
+    lcd.setCursor(0, 1);                   // Move cursor to second row 
+
+    lcd.print("Out of range");             // Display error message 
+
+  }  
+
+  else { 
+
+    lcd.clear();                           // Clear LCD before showing new reading 
+
+    lcd.setCursor(0, 0);                   // Set cursor to first row 
+
+    lcd.print("Distance:");                // Print label 
+
+    lcd.setCursor(0, 1);                   // Move cursor to second row 
+
+    lcd.print(distance);                   // Print distance value 
+
+    lcd.print(" cm");                      // Print unit 
+
+    delay(500);                            // Wait 0.5 seconds before next reading 
+
+  } 
+
+ 
+ 
+
+  delay(500);                              // Additional delay for stability 
+
+} 
+
+ 
