@@ -1,0 +1,112 @@
+/* 
+
+  ------------------------------------------------------------ 
+
+  Program: Arduino Ohmmeter 
+
+  ------------------------------------------------------------ 
+
+  ▪ Goal: 
+
+    To measure the resistance of an unknown resistor using Arduino 
+
+    with a voltage divider circuit and display the calculated 
+
+    resistance in ohms on the Serial Monitor. 
+
+ 
+ 
+
+  ▪ Main Theme: 
+
+    This project demonstrates analog input measurement and 
+
+    calculation of unknown resistance using a voltage divider 
+
+    formula: 
+
+        R_unknown = R_known * (V_out / (V_in - V_out)) 
+
+    It introduces basic analog-to-digital conversion, math operations, 
+
+    and serial output. 
+
+ 
+ 
+
+  ▪ Hardware Setup: 
+
+    - Connect a known resistor R1 in series with the unknown resistor Rx. 
+
+    - Connect one end of R1 to 5V, the other end to the junction with Rx. 
+
+    - Connect the other end of Rx to GND. 
+
+    - Measure the voltage at the junction between R1 and Rx with Arduino A0. 
+
+  ------------------------------------------------------------ 
+
+*/ 
+
+ 
+ 
+
+const int analogPin = A0;       // Analog pin connected to voltage divider junction 
+
+const float Vin = 5.0;          // Supply voltage (Arduino 5V) 
+
+const float R1 = 10000.0;       // Known resistor value in ohms 
+
+float R_unknown = 0.0;          // Variable to store calculated resistance 
+
+ 
+ 
+
+void setup() { 
+
+  Serial.begin(9600);           // Initialize Serial Monitor at 9600 baud 
+
+  Serial.println("Arduino Ohmmeter"); 
+
+  Serial.println("----------------"); 
+
+} 
+
+ 
+ 
+
+void loop() { 
+
+  int rawValue = analogRead(analogPin);         // Read analog voltage (0–1023) 
+
+  float Vout = rawValue * (Vin / 1023.0);      // Convert ADC reading to voltage 
+
+ 
+ 
+
+  R_unknown = R1 * (Vout / (Vin - Vout));      // Calculate unknown resistance using voltage divider formula 
+
+ 
+ 
+
+  Serial.print("Raw ADC: ");                    // Print raw ADC value 
+
+  Serial.print(rawValue); 
+
+  Serial.print("  |  Resistance: ");           // Print resistance label 
+
+  Serial.print(R_unknown);                  // Print resistance in ohms 
+
+  Serial.println(" Ω"); 
+
+ 
+ 
+
+  delay(1000);                                 // Wait 1 second before next reading 
+
+} 
+
+ 
+ 
+
+ 
