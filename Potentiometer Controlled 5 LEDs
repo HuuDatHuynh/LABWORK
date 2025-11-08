@@ -1,0 +1,60 @@
+/*
+  ------------------------------------------------------------
+  Program: Potentiometer Controlled 5 LEDs
+  ------------------------------------------------------------
+  ▪ Goal:
+    Read the analog value from a potentiometer and turn on a number
+    of LEDs proportional to the potentiometer position.
+    For example, if the potentiometer is at minimum, no LED is on;
+    at maximum, all 5 LEDs are on.
+
+  ▪ Main Theme:
+    This project demonstrates analog input reading and using it
+    to control multiple digital outputs (LEDs). It introduces
+    mapping analog values to discrete ranges and controlling multiple pins.
+  
+  ▪ Hardware Setup:
+    - Potentiometer middle pin → A0
+    - Other potentiometer pins → 5V and GND
+    - 5 LEDs connected to digital pins (with current-limiting resistors)
+  ------------------------------------------------------------
+*/
+
+const int potPin = A0;                // Potentiometer connected to analog pin A0
+const int ledPins[5] = {2, 3, 4, 5, 6}; // Digital pins for 5 LEDs
+int potValue = 0;                      // Variable to store potentiometer reading
+int numLEDs = 0;                       // Number of LEDs to turn on
+
+void setup() {
+  // Initialize LED pins as outputs
+  for (int i = 0; i < 5; i++) {
+    pinMode(ledPins[i], OUTPUT);
+    digitalWrite(ledPins[i], LOW);    // Turn all LEDs off initially
+  }
+
+  Serial.begin(9600);                 // Initialize Serial Monitor
+}
+
+void loop() {
+  potValue = analogRead(potPin);                     // Read potentiometer value (0–1023)
+  
+  // Map potentiometer value to number of LEDs (0–5)
+  numLEDs = map(potValue, 0, 1023, 0, 5);
+
+  // Turn LEDs on/off based on numLEDs
+  for (int i = 0; i < 5; i++) {
+    if (i < numLEDs) {
+      digitalWrite(ledPins[i], HIGH);   // Turn on LED
+    } else {
+      digitalWrite(ledPins[i], LOW);    // Turn off LED
+    }
+  }
+
+  // Print info to Serial Monitor for debugging
+  Serial.print("Potentiometer: ");
+  Serial.print(potValue);
+  Serial.print(" | LEDs on: ");
+  Serial.println(numLEDs);
+
+  delay(100);  // Small delay for stability
+}
