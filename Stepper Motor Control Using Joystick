@@ -1,0 +1,166 @@
+/* 
+
+  ------------------------------------------------------------ 
+
+  Program: Stepper Motor Control Using Joystick 
+
+  ------------------------------------------------------------ 
+
+  ▪ Goal: 
+
+    This program controls a 28BYJ-48 stepper motor using a joystick. 
+
+    The motor speed and direction are determined by the position of 
+
+    the joystick's X-axis. Moving the joystick left or right controls 
+
+    the rotation direction and speed of the stepper motor, while 
+
+    keeping it near the center stops the motor. 
+
+ 
+ 
+
+  ▪ Main Theme: 
+
+    The main theme is "analog input controlling motor movement". 
+
+    The joystick provides an analog voltage (0–1023), which is used 
+
+    to control the stepper motor’s rotation speed and direction. 
+
+ 
+ 
+
+  ▪ Hardware Used: 
+
+    - Stepper motor (28BYJ-48) 
+
+    - ULN2003 driver module 
+
+    - Joystick module (X-axis connected to A0) 
+
+    - Arduino board 
+
+ 
+ 
+
+  ------------------------------------------------------------ 
+
+*/ 
+
+ 
+ 
+
+#include <Stepper.h>   // Include the Stepper library to control the stepper motor 
+
+ 
+ 
+
+const int stepsPerRevolution = 2048;       // Number of steps per full revolution for 28BYJ-48 motor 
+
+ 
+ 
+
+// Initialize stepper motor object with pins IN1-IN4 connected to Arduino pins 8, 10, 9, 11 
+
+Stepper myStepper(stepsPerRevolution, 8, 10, 9, 11); 
+
+ 
+ 
+
+const int joyX = A0;                       // Joystick X-axis connected to analog pin A0 
+
+ 
+ 
+
+void setup() { 
+
+  Serial.begin(9600);                      // Initialize serial communication for monitoring 
+
+} 
+
+ 
+ 
+
+void loop() { 
+
+  int val = analogRead(joyX);              // Read joystick X-axis value (range: 0–1023) 
+
+  int stepSpeed = 0;                       // Variable to store calculated stepper speed 
+
+  int direction = 1;                       // Direction variable: 1 = forward, -1 = backward 
+
+ 
+ 
+
+  int deadzone = 50;                       // Define deadzone range around joystick center to prevent jitter 
+
+ 
+ 
+
+  // Determine direction and speed based on joystick position 
+
+  if (val > 512 + deadzone) {              // Joystick pushed to the right 
+
+    direction = 1;                         // Set forward direction 
+
+    stepSpeed = map(val, 512 + deadzone, 1023, 0, 20);   // Map joystick value to speed (0–20) 
+
+  }  
+
+  else if (val < 512 - deadzone) {         // Joystick pushed to the left 
+
+    direction = -1;                        // Set backward direction 
+
+    stepSpeed = map(val, 512 - deadzone, 0, 0, 20);      // Map joystick value to speed (0–20) 
+
+  }  
+
+  else {                                   // Joystick near center 
+
+    stepSpeed = 0;                         // Motor stops 
+
+  } 
+
+ 
+ 
+
+  // If speed is greater than 0, move the stepper 
+
+  if (stepSpeed > 0) { 
+
+    myStepper.setSpeed(stepSpeed * 2);     // Convert speed to RPM (adjust multiplier for smoother movement) 
+
+    myStepper.step(direction);             // Step motor in chosen direction 
+
+  } 
+
+ 
+ 
+
+  // Print joystick and motor data to Serial Monitor 
+
+  Serial.print("Joystick: "); 
+
+  Serial.print(val); 
+
+  Serial.print(" -> Speed: "); 
+
+  Serial.print(stepSpeed); 
+
+  Serial.print(" Dir: "); 
+
+  Serial.println((direction == 1) ? "Forward" : "Backward"); 
+
+ 
+ 
+
+  delay(10);                               // Small delay for stable operation 
+
+} 
+
+ 
+ 
+
+ 
