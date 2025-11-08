@@ -1,0 +1,84 @@
+/* 
+
+  ------------------------------------------------------------ 
+
+  Program: Servo Motor Control Using Joystick 
+
+  ------------------------------------------------------------ 
+
+  ▪ Goal: 
+
+    This program controls the position of a servo motor using 
+
+    the horizontal movement (X-axis) of a joystick. The joystick’s 
+
+    analog signal (0–1023) is converted into a corresponding 
+
+    servo angle (0–180 degrees). 
+
+ 
+ 
+
+  ▪ Main Theme: 
+
+    The project demonstrates analog input control — using a joystick 
+
+    as an analog sensor to provide variable input that directly 
+
+    controls a servo motor’s position. It introduces analog-to-digital 
+
+    conversion, value mapping, and servo motor actuation. 
+
+  ------------------------------------------------------------ 
+
+*/ 
+
+ 
+ 
+
+#include <Servo.h>        // Include the Servo library to control servo motors 
+
+ 
+ 
+
+Servo myServo;            // Create a Servo object named myServo 
+
+ 
+ 
+
+int joyX = A0;            // Joystick X-axis connected to analog pin A0 
+
+int servoPin = 9;         // Servo signal pin connected to digital pin 9 
+
+int val;                  // Variable to store the joystick’s analog reading 
+
+ 
+ 
+
+void setup() {   
+
+  myServo.attach(servoPin);  // Attach the servo object to pin 9 
+
+  pinMode(joyX, INPUT);      // Set joystick pin as input (reads analog voltage) 
+
+} 
+
+ 
+ 
+
+void loop() {   
+
+  val = analogRead(joyX);           // Read the analog value from joystick (0–1023) 
+
+  val = map(val, 0, 1023, 0, 180);  // Map joystick value to servo range (0–180°) 
+
+  myServo.write(val);               // Command servo to rotate to the mapped angle 
+
+  delay(15);                        // Small delay for smoother servo movement 
+
+} 
+
+ 
+ 
+
+ 
