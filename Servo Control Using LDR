@@ -1,0 +1,135 @@
+/* 
+
+  ------------------------------------------------------------ 
+
+  Program: Servo Control Using LDR (Light Sensor) 
+
+  ------------------------------------------------------------ 
+
+  ▪ Goal: 
+
+    This program uses a Light Dependent Resistor (LDR) to control 
+
+    the angle of a servo motor based on the amount of light detected. 
+
+    The LDR provides an analog input (0–1023), which is converted 
+
+    into a servo angle (0–180°). The current LDR reading is also 
+
+    displayed on the Serial Monitor every second. 
+
+ 
+ 
+
+  ▪ Main Theme: 
+
+    This project demonstrates how to use an analog sensor (LDR) 
+
+    to control a servo motor — an example of analog input control 
+
+    of a mechanical actuator. It also uses timing with millis() 
+
+    to print data at fixed intervals without blocking servo motion. 
+
+  ------------------------------------------------------------ 
+
+*/ 
+
+ 
+ 
+
+#include <Servo.h>          // Include the Servo library to control servo motors 
+
+ 
+ 
+
+Servo myServo;              // Create a Servo object 
+
+ 
+ 
+
+int LDR = A0;               // LDR sensor connected to analog pin A0 
+
+int servoPin = 9;           // Servo signal pin connected to digital pin 9 
+
+int val;                    // Variable to store raw LDR value 
+
+unsigned long previousMillis = 0; // Store last time a message was printed 
+
+const long interval = 1000;        // Time interval (1 second) for Serial output 
+
+ 
+ 
+
+// Define expected LDR range (based on calibration or testing) 
+
+const int LDR_MIN = 390;    // Minimum expected LDR value (dark) 
+
+const int LDR_MAX = 730;    // Maximum expected LDR value (bright) 
+
+int angle;                  // Variable to store servo angle 
+
+ 
+ 
+
+void setup() {   
+
+  Serial.begin(9600);       // Initialize serial communication for monitoring 
+
+  myServo.attach(servoPin); // Attach the servo to pin 9 
+
+  pinMode(LDR, INPUT);      // Set LDR pin as input 
+
+} 
+
+ 
+ 
+
+void loop() {   
+
+  val = analogRead(LDR);                                // Read the LDR analog value (0–1023) 
+
+  angle = map(val, LDR_MIN, LDR_MAX, 0, 180);           // Map LDR value to servo angle (0–180°) 
+
+  angle = constrain(angle, 0, 180);                     // Ensure the angle stays within 0–180° 
+
+ 
+ 
+
+  myServo.write(angle);                                 // Move the servo to the calculated angle 
+
+ 
+ 
+
+  unsigned long currentMillis = millis();               // Get the current time in milliseconds 
+
+ 
+ 
+
+  // Print the LDR value to Serial Monitor every 1 second 
+
+  if (currentMillis - previousMillis >= interval) {     // Check if interval has passed 
+
+    previousMillis = currentMillis;                     // Update last print time 
+
+    Serial.print("LDR value = ");                       // Print label 
+
+    Serial.print(val);                                  // Print LDR reading 
+
+    Serial.print("\tServo angle = ");                   // Print label 
+
+    Serial.println(angle);                              // Print calculated servo angle 
+
+  } 
+
+ 
+ 
+
+  delay(15);                                            // Short delay for smooth servo motion 
+
+} 
+
+ 
+ 
+
+ 
