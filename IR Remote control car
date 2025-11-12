@@ -1,0 +1,170 @@
+#include <IRremote.h>  // Include the IRremote library for reading IR signals
+
+// === Motor Driver Pins ===
+const int AIN1 = 7;   // Motor A direction pin 1
+const int AIN2 = 8;   // Motor B direction pin 2
+const int PWMA = 5;   // Motor A PWM speed control pin
+const int PWMB = 6;   // Motor B PWM speed control pin
+const int STANDBY = 3; // Standby pin to enable motor driver
+
+// === IR Receiver Pin ===
+const int IR_RECEIVE_PIN = 9;  // Pin connected to IR receiver output
+
+// === Speed Control ===
+int speedValue = 150;       // Initial speed value (range 0-255)
+const int speedStep = 25;   // Step for increasing or decreasing speed
+
+// === Track last direction for dynamic speed changes ===
+String lastDirection = "STOP";  // Stores current direction ("FORWARD", "BACKWARD", "LEFT", "RIGHT", "STOP")
+
+// === IR Remote Button Codes ===
+#define FORWARD_CODE    0xB946FF00  // IR code for Forward button
+#define RIGHT_CODE      0xBC43FF00  // IR code for Right button
+#define LEFT_CODE       0xBB44FF00  // IR code for Left button
+#define BACKWARD_CODE   0xEA15FF00  // IR code for Backward button
+#define SPEED_UP_CODE   0xF708FF00  // IR code for Speed Up button (7)
+#define SPEED_DOWN_CODE 0xA55AFF00  // IR code for Speed Down button (9)
+#define STOP_CODE       0xBF40FF00  // IR code for Stop button (0)
+
+void setup() {
+  // === Motor pin setup ===
+  pinMode(PWMA, OUTPUT);    // Set Motor A PWM as output
+  pinMode(PWMB, OUTPUT);    // Set Motor B PWM as output
+  pinMode(AIN1, OUTPUT);    // Set Motor A direction as output
+  pinMode(AIN2, OUTPUT);    // Set Motor B direction as output
+  pinMode(STANDBY, OUTPUT); // Set standby pin as output
+  digitalWrite(STANDBY, HIGH); // Enable motor driver
+
+  // === Serial and IR receiver setup ===
+  Serial.begin(9600);                     // Start Serial monitor for debugging
+  IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);  // Initialize IR receiver with LED feedback
+  Serial.println("IR Car Control Ready (Dynamic Speed Change)");  // Print ready message
+}
+
+void loop() {
+  // Check if an IR signal has been received
+  if (IrReceiver.decode()) {
+
+    // === Ignore repeat signals when holding a button ===
+    if (IrReceiver.decodedIRData.flags & IRDATA_FLAGS_IS_REPEAT) {
+      IrReceiver.resume();  // Prepare IR receiver for next signal
+      return;               // Skip processing repeat signals
+    }
+
+    // === Read the received IR code ===
+    unsigned long code = IrReceiver.decodedIRData.decodedRawData;
+
+    // === Ignore invalid or empty signals (0x0) ===
+    if (code == 0x0) {
+      IrReceiver.resume();  // Prepare IR receiver for next signal
+      return;               // Skip processing invalid signals
+    }
+
+    // Print the received IR code in HEX format
+    Serial.print("IR Code: 0x");
+    Serial.println(code, HEX);
+
+    // === Handle the IR code with switch-case ===
+    switch (code) {
+
+      // === Movement commands ===
+      case FORWARD_CODE:
+        Forward(speedValue);    // Move forward with current speed
+        lastDirection = "FORWARD"; // Update last direction
+        break;
+
+      case BACKWARD_CODE:
+        Backward(speedValue);   // Move backward with current speed
+        lastDirection = "BACKWARD"; // Update last direction
+        break;
+
+      case LEFT_CODE:
+        Left(speedValue);       // Turn left with current speed
+        lastDirection = "LEFT"; // Update last direction
+        break;
+
+      case RIGHT_CODE:
+        Right(speedValue);      // Turn right with current speed
+        lastDirection = "RIGHT"; // Update last direction
+        break;
+
+      case STOP_CODE:
+        Stop();                 // Stop the car
+        lastDirection = "STOP"; // Update last direction
+        break;
+
+      // === Speed control commands ===
+      case SPEED_UP_CODE:
+        speedValue += speedStep;           // Increase speed
+        if (speedValue > 255) speedValue = 255;  // Limit speed to max 255
+        Serial.print("Speed Increased: "); 
+        Serial.println(speedValue);        // Print new speed
+        applyLastDirection();              // Apply new speed without stopping
+        break;
+
+      case SPEED_DOWN_CODE:
+        speedValue -= speedStep;           // Decrease speed
+        if (speedValue < 0) speedValue = 0; // Limit speed to min 0
+        Serial.print("Speed Decreased: "); 
+        Serial.println(speedValue);        // Print new speed
+        applyLastDirection();              // Apply new speed without stopping
+        break;
+
+      default:
+        // Unknown or unhandled code — do nothing
+        Serial.println("Unknown IR code.");
+        break;
+    }
+
+    // Prepare the IR receiver for the next signal
+    IrReceiver.resume();
+  }
+}
+
+// === Helper function to reapply last direction with updated speed ===
+void applyLastDirection() {
+  if (lastDirection == "FORWARD") Forward(speedValue);   // Continue forward at new speed
+  else if (lastDirection == "BACKWARD") Backward(speedValue); // Continue backward
+  else if (lastDirection == "LEFT") Left(speedValue);    // Continue left
+  else if (lastDirection == "RIGHT") Right(speedValue);  // Continue right
+  else Stop();                                           // If stopped, remain stopped
+}
+
+// === Motor control functions ===
+void Forward(byte speed) {
+  digitalWrite(AIN1, HIGH);  // Set Motor A forward
+  digitalWrite(AIN2, HIGH);  // Set Motor B forward
+  analogWrite(PWMA, speed);  // Set Motor A speed
+  analogWrite(PWMB, speed);  // Set Motor B speed
+  digitalWrite(STANDBY, HIGH); // Ensure motor driver is active
+}
+
+void Backward(byte speed) {
+  digitalWrite(AIN1, LOW);   // Set Motor A backward
+  digitalWrite(AIN2, LOW);   // Set Motor B backward
+  analogWrite(PWMA, speed);  // Set Motor A speed
+  analogWrite(PWMB, speed);  // Set Motor B speed
+  digitalWrite(STANDBY, HIGH); // Ensure motor driver is active
+}
+
+void Left(byte speed) {
+  digitalWrite(AIN1, HIGH);  // Motor A forward
+  digitalWrite(AIN2, LOW);   // Motor B backward (turning left)
+  analogWrite(PWMA, speed);  // Motor A speed
+  analogWrite(PWMB, speed);  // Motor B speed
+  digitalWrite(STANDBY, HIGH);
+}
+
+void Right(byte speed) {
+  digitalWrite(AIN1, LOW);   // Motor A backward
+  digitalWrite(AIN2, HIGH);  // Motor B forward (turning right)
+  analogWrite(PWMA, speed);  // Motor A speed
+  analogWrite(PWMB, speed);  // Motor B speed
+  digitalWrite(STANDBY, HIGH);
+}
+
+void Stop() {
+  analogWrite(PWMA, 0);      // Stop Motor A
+  analogWrite(PWMB, 0);      // Stop Motor B
+  digitalWrite(STANDBY, HIGH); // Keep driver enabled
+}
