@@ -14,8 +14,8 @@ const int LINE_TRACKING_M = A1;
 const int LINE_TRACKING_L = A2;
 
 // =================== ULTRASONIC SENSOR ===================
-const int trigPin = 9;
-const int echoPin = 10;
+const int trigPin = 13;
+const int echoPin = 12;
 const int servoPin = 10;  // Servo connected to digital pin 10
 Servo usServo;
 
