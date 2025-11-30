@@ -23,6 +23,7 @@ Servo usServo;
 // =================== SPEED CONTROL ======================
 int speedValue = 80;
 const int speedStep = 10;
+const int defaultVictoryLapSpeed = 120;
 
 // =================== STATE MEMORY =======================
 String lastDirection = "FORWARD";
@@ -45,6 +46,25 @@ int currentMode = 0;  // 0 = IR, 1 = Line Follow, 2 = Object Avoidance, 3 = Vict
 const int LINE_THRESHOLD = 500;
 const int AIR_THRESHOLD  = 900;
 const int SAFE_DISTANCE  = 30;
+
+// =================== FUNCTION PROTOTYPES ================
+void Mode_IR();
+void Mode_LineFollow();
+void Mode_ObjectAvoidance();
+bool handleIR();
+void Forward(byte speed);
+void Backward(byte speed);
+void Left(byte speed);
+void Right(byte speed);
+void Stop();
+void applyLastDirection();
+void VictoryLap();
+void runSegmentForward(int speed, unsigned long duration);
+void runSegmentRight(int speed, unsigned long duration);
+void searchForLine();
+bool readLineSensors();
+int measureAt(int angle);
+int getDistance();
 
 // =================== SETUP =============================
 void setup() {
@@ -69,20 +89,72 @@ void setup() {
   delay(500);
 
   IrReceiver.begin(9, ENABLE_LED_FEEDBACK);
-
   Serial.println("IR + Line Follow + Object Avoidance + Victory Lap Ready");
 }
 
 // =================== LOOP ==============================
 void loop() {
-
   switch (currentMode) {
-    case 0: Mode_IR(); break;
-    case 1: Mode_LineFollow(); break;
-    case 2: Mode_ObjectAvoidance(); break;
-    case 3: VictoryLap(); break;
+    case 0:
+      Mode_IR();
+      break;
+    case 1:
+      Mode_LineFollow();
+      break;
+    case 2:
+      Mode_ObjectAvoidance();
+      break;
+    case 3:
+      VictoryLap();
+      break;
   }
+}
 
+// =================== MOTOR FUNCTIONS ===================
+void Forward(byte speed) {
+  digitalWrite(AIN1, HIGH);
+  digitalWrite(AIN2, HIGH);
+  analogWrite(PWMA, speed);
+  analogWrite(PWMB, speed);
+  digitalWrite(STANDBY, HIGH);
+}
+
+void Backward(byte speed) {
+  digitalWrite(AIN1, LOW);
+  digitalWrite(AIN2, LOW);
+  analogWrite(PWMA, speed);
+  analogWrite(PWMB, speed);
+  digitalWrite(STANDBY, HIGH);
+}
+
+void Left(byte speed) {
+  digitalWrite(AIN1, HIGH);
+  digitalWrite(AIN2, LOW);
+  analogWrite(PWMA, speed);
+  analogWrite(PWMB, speed);
+  digitalWrite(STANDBY, HIGH);
+}
+
+void Right(byte speed) {
+  digitalWrite(AIN1, LOW);
+  digitalWrite(AIN2, HIGH);
+  analogWrite(PWMA, speed);
+  analogWrite(PWMB, speed);
+  digitalWrite(STANDBY, HIGH);
+}
+
+void Stop() {
+  analogWrite(PWMA, 0);
+  analogWrite(PWMB, 0);
+  digitalWrite(STANDBY, HIGH);
+}
+
+void applyLastDirection() {
+  if (isStopped) return;
+  if (lastDirection == "FORWARD") Forward(speedValue);
+  else if (lastDirection == "BACKWARD") Backward(speedValue);
+  else if (lastDirection == "LEFT") Left(speedValue);
+  else if (lastDirection == "RIGHT") Right(speedValue);
 }
 
 // =================== UNIVERSAL IR HANDLER ==============
@@ -91,6 +163,7 @@ bool handleIR() {
 
   unsigned long code = IrReceiver.decodedIRData.decodedRawData;
   IrReceiver.resume();
+
   if (code == 0x0) return false;
   if (IrReceiver.decodedIRData.flags & IRDATA_FLAGS_IS_REPEAT) return false;
 
@@ -102,7 +175,7 @@ bool handleIR() {
   }
 
   if (code == MODE_BUTTON) {
-    currentMode = (currentMode + 1) % 4;  // *** NOW 4 MODES ***
+    currentMode = (currentMode + 1) % 4;
     Stop();
     isStopped = true;
 
@@ -123,79 +196,70 @@ bool handleIR() {
     isStopped = false;
 
     switch (code) {
-      case FORWARD_CODE:  Forward(speedValue); lastDirection = "FORWARD"; break;
+      case FORWARD_CODE: Forward(speedValue); lastDirection = "FORWARD"; break;
       case BACKWARD_CODE: Backward(speedValue); lastDirection = "BACKWARD"; break;
-      case LEFT_CODE:     Left(speedValue); lastDirection = "LEFT"; break;
-      case RIGHT_CODE:    Right(speedValue); lastDirection = "RIGHT"; break;
+      case LEFT_CODE: Left(speedValue); lastDirection = "LEFT"; break;
+      case RIGHT_CODE: Right(speedValue); lastDirection = "RIGHT"; break;
     }
 
     return true;
   }
 
-  if (code == SPEED_UP_CODE) {
-    speedValue += speedStep; if (speedValue > 255) speedValue = 255;
-    applyLastDirection();
-    return true;
-  }
-
-  if (code == SPEED_DOWN_CODE) {
-    speedValue -= speedStep; if (speedValue < 0) speedValue = 0;
-    applyLastDirection();
-    return true;
-  }
+  if (code == SPEED_UP_CODE) { speedValue += speedStep; if (speedValue > 255) speedValue = 255; applyLastDirection(); return true; }
+  if (code == SPEED_DOWN_CODE) { speedValue -= speedStep; if (speedValue < 0) speedValue = 0; applyLastDirection(); return true; }
 
   return false;
 }
 
-// =================== IR MODE ===========================
-void Mode_IR() {
-  int L = analogRead(LINE_TRACKING_L);
-  int M = analogRead(LINE_TRACKING_M);
-  int R = analogRead(LINE_TRACKING_R);
-
-  if (L > AIR_THRESHOLD && M > AIR_THRESHOLD && R > AIR_THRESHOLD) {
-    Stop();
-    isStopped = true;
-    Serial.println("In-air detected -> STOP");
-    return;
+// =================== VICTORY LAP ===================
+void runSegmentForward(int speed, unsigned long duration) {
+  unsigned long start = millis();
+  while (millis() - start < duration) {
+    if (handleIR()) {
+      if (isStopped || currentMode != 3) {
+        Stop();
+        return;
+      }
+    }
+    Forward(speed);
   }
-
-  handleIR();
+  Stop();
 }
 
-// =================== LINE FOLLOW =======================
-bool readLineSensors();
-void searchForLine();
-
-void Mode_LineFollow() {
-  if (handleIR()) return;
-
-  int L = analogRead(LINE_TRACKING_L);
-  int M = analogRead(LINE_TRACKING_M);
-  int R = analogRead(LINE_TRACKING_R);
-
-  if (L > AIR_THRESHOLD && M > AIR_THRESHOLD && R > AIR_THRESHOLD) {
-    Stop();
-    isStopped = true;
-    Serial.println("In-air detected -> STOP");
-    return;
+void runSegmentRight(int speed, unsigned long duration) {
+  unsigned long start = millis();
+  while (millis() - start < duration) {
+    if (handleIR()) {
+      if (isStopped || currentMode != 3) {
+        Stop();
+        return;
+      }
+    }
+    Right(speed);
   }
-
-  if (isStopped) { Stop(); return; }
-
-  bool leftBlack   = L > LINE_THRESHOLD;
-  bool middleBlack = M > LINE_THRESHOLD;
-  bool rightBlack  = R > LINE_THRESHOLD;
-
-  if (middleBlack) Forward(speedValue);
-  else if (leftBlack) Left(speedValue);
-  else if (rightBlack) Right(speedValue);
-  else searchForLine();
-
-  delay(50);
+  Stop();
 }
 
-// =================== LINE FOLLOW HELPERS =================
+void VictoryLap() {
+  Serial.println("Starting Victory Lap!");
+  isStopped = false;
+  int lapSpeed = defaultVictoryLapSpeed;
+
+  runSegmentForward(lapSpeed, 4300);
+  runSegmentRight(lapSpeed, 500);
+  runSegmentForward(lapSpeed, 2500);
+  runSegmentRight(lapSpeed, 500);
+  runSegmentForward(lapSpeed, 4300);
+  runSegmentRight(lapSpeed, 500);
+  runSegmentForward(lapSpeed, 2500);
+  runSegmentRight(lapSpeed, 500);
+
+  Serial.println("Victory Lap Complete!");
+  currentMode = 0;
+  Stop();
+}
+
+// =================== LINE FOLLOW FUNCTIONS =============
 bool readLineSensors() {
   int L = analogRead(LINE_TRACKING_L);
   int M = analogRead(LINE_TRACKING_M);
@@ -230,117 +294,57 @@ void searchForLine() {
   Stop();
 }
 
-// =================== OBJECT AVOIDANCE ===================
-int getDistance();
-int measureAt(int angle);
+void Mode_LineFollow() {
+  if (handleIR()) return;
 
-void Mode_ObjectAvoidance() {
+  int L = analogRead(LINE_TRACKING_L);
+  int M = analogRead(LINE_TRACKING_M);
+  int R = analogRead(LINE_TRACKING_R);
 
-    if (handleIR()) return;
-
-    int distanceForward = measureAt(90);
-
-    if (distanceForward > SAFE_DISTANCE) {
-        Forward(speedValue);
-        return;
-    }
-
+  if (L > AIR_THRESHOLD && M > AIR_THRESHOLD && R > AIR_THRESHOLD) {
     Stop();
-    delay(200);
-
-    int distanceLeft = measureAt(160);
-    usServo.write(90);
-    delay(300);
-
-    if (distanceLeft > SAFE_DISTANCE) {
-        Left(speedValue);
-        delay(400);
-        Stop();
-        return;
-    }
-
-    int distanceRight = measureAt(20);
-    usServo.write(90);
-    delay(300);
-
-    if (distanceRight > SAFE_DISTANCE) {
-        Right(speedValue);
-        delay(400);
-        Stop();
-        return;
-    }
-
-    Left(speedValue);
-    delay(1300);
-    Stop();
-}
-
-// =================== VICTORY LAP MODE ===================
-void VictoryLap() {
-
-  if (handleIR()) {
-    if (isStopped || currentMode != 3) {
-      Stop();
-      return;
-    }
+    isStopped = true;
+    Serial.println("In-air detected -> STOP");
+    return;
   }
 
-  Serial.println("Starting Victory Lap!");
+  if (isStopped) { Stop(); return; }
 
-  Forward(200);
-  delay(4300);
-  Stop();
-  delay(1000);
+  bool leftBlack   = L > LINE_THRESHOLD;
+  bool middleBlack = M > LINE_THRESHOLD;
+  bool rightBlack  = R > LINE_THRESHOLD;
 
-  Right(100);
-  delay(500);
-  Stop();
-  delay(1000);
+  if (middleBlack) Forward(speedValue);
+  else if (leftBlack) Left(speedValue);
+  else if (rightBlack) Right(speedValue);
+  else searchForLine();
 
-  Forward(200);
-  delay(2500);
-  Stop();
-  delay(1000);
-
-  Right(100);
-  delay(500);
-  Stop();
-  delay(1000);
-
-  Forward(200);
-  delay(4300);
-  Stop();
-  delay(1000);
-
-  Right(100);
-  delay(500);
-  Stop();
-  delay(1000);
-
-  Forward(200);
-  delay(2500);
-  Stop();
-  delay(1000);
-
-  Right(100);
-  delay(500);
-  Stop();
-  delay(1000);
-
-  Serial.println("Victory Lap Complete!");
-
-  currentMode = 0;
-  Stop();
+  delay(50);
 }
 
-// ===================MEASURE ANGLE=============  
+// =================== IR MODE ===========================
+void Mode_IR() {
+  int L = analogRead(LINE_TRACKING_L);
+  int M = analogRead(LINE_TRACKING_M);
+  int R = analogRead(LINE_TRACKING_R);
+
+  if (L > AIR_THRESHOLD && M > AIR_THRESHOLD && R > AIR_THRESHOLD) {
+    Stop();
+    isStopped = true;
+    Serial.println("In-air detected -> STOP");
+    return;
+  }
+
+  handleIR();
+}
+
+// =================== OBJECT AVOIDANCE ==================
 int measureAt(int angle) {
   usServo.write(angle);
   delay(1000);
   return getDistance();
 }
 
-// ===================DISTANCE==================
 int getDistance() {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -350,57 +354,30 @@ int getDistance() {
 
   long duration = pulseIn(echoPin, HIGH, 20000);
   int distance = duration * 0.034 / 2;
-
   if (distance == 0 || distance > 300) distance = 300;
-
   return distance;
 }
 
-// =================== HELPER ===========================
-void applyLastDirection() {
-  if (isStopped) return;
+void Mode_ObjectAvoidance() {
+  if (handleIR()) return;
 
-  if (lastDirection == "FORWARD") Forward(speedValue);
-  else if (lastDirection == "BACKWARD") Backward(speedValue);
-  else if (lastDirection == "LEFT") Left(speedValue);
-  else if (lastDirection == "RIGHT") Right(speedValue);
-}
+  int distanceForward = measureAt(90);
+  if (distanceForward > SAFE_DISTANCE) { Forward(speedValue); return; }
 
-// =================== MOTOR FUNCTIONS ===================
-void Forward(byte speed) {
-  digitalWrite(AIN1,HIGH);
-  digitalWrite(AIN2,HIGH);
-  analogWrite(PWMA,speed);
-  analogWrite(PWMB,speed);
-  digitalWrite(STANDBY,HIGH);
-}
+  Stop();
+  delay(200);
 
-void Backward(byte speed){
-  digitalWrite(AIN1,LOW);
-  digitalWrite(AIN2,LOW);
-  analogWrite(PWMA,speed);
-  analogWrite(PWMB,speed);
-  digitalWrite(STANDBY,HIGH);
-}
+  int distanceLeft = measureAt(160);
+  usServo.write(90);
+  delay(300);
+  if (distanceLeft > SAFE_DISTANCE) { Left(speedValue); delay(400); Stop(); return; }
 
-void Left(byte speed){
-  digitalWrite(AIN1,HIGH);
-  digitalWrite(AIN2,LOW);
-  analogWrite(PWMA,speed);
-  analogWrite(PWMB,speed);
-  digitalWrite(STANDBY,HIGH);
-}
+  int distanceRight = measureAt(20);
+  usServo.write(90);
+  delay(300);
+  if (distanceRight > SAFE_DISTANCE) { Right(speedValue); delay(400); Stop(); return; }
 
-void Right(byte speed){
-  digitalWrite(AIN1,LOW);
-  digitalWrite(AIN2,HIGH);
-  analogWrite(PWMA,speed);
-  analogWrite(PWMB,speed);
-  digitalWrite(STANDBY,HIGH);
-}
-
-void Stop(){
-  analogWrite(PWMA,0);
-  analogWrite(PWMB,0);
-  digitalWrite(STANDBY,HIGH);
+  Left(speedValue);
+  delay(1300);
+  Stop();
 }
