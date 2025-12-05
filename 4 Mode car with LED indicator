@@ -1,48 +1,45 @@
-// Include necessary libraries
-#include <IRremote.h>       // Library to receive IR remote signals
-#include <Servo.h>          // Library to control servo motors
-#include <Adafruit_NeoPixel.h> // Library for controlling WS2812 (NeoPixel) LEDs
+#include <IRremote.h>  // Library for IR remote control
+#include <Servo.h>     // Library for controlling servo motors
+#include <Adafruit_NeoPixel.h>  // Library for controlling WS2812 LEDs
 
-// =================== LED SETUP ===================
-#define LED_PIN 4       // WS2812 data input pin
-#define NUM_LEDS 1      // Number of WS2812 LEDs
+#define LED_PIN 4       // WS2812 DIN pin
+#define NUM_LEDS 1      // Number of LEDs in the strip
 
-// Initialize the NeoPixel strip
-Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);  // Initialize LED strip
 
 // =================== MOTOR DRIVER PINS ===================
-const int AIN1 = 7;      // Motor A input 1
-const int AIN2 = 8;      // Motor A input 2
-const int PWMA = 5;      // Motor A PWM speed control
-const int PWMB = 6;      // Motor B PWM speed control
-const int STANDBY = 3;   // Motor driver standby pin
+const int AIN1 = 7;   // Motor A control pin 1
+const int AIN2 = 8;   // Motor A control pin 2
+const int PWMA = 5;   // Motor A speed pin (PWM)
+const int PWMB = 6;   // Motor B speed pin (PWM)
+const int STANDBY = 3; // Motor driver standby pin
 
-// =================== LINE TRACKING SENSORS ===================
-const int LINE_TRACKING_R = A0; // Right line sensor
-const int LINE_TRACKING_M = A1; // Middle line sensor
-const int LINE_TRACKING_L = A2; // Left line sensor
+// =================== LINE SENSORS ========================
+const int LINE_TRACKING_R = A0;  // Right line tracking sensor
+const int LINE_TRACKING_M = A1;  // Middle line tracking sensor
+const int LINE_TRACKING_L = A2;  // Left line tracking sensor
 
-// =================== ULTRASONIC SENSOR PINS ===================
-const int trigPin = 13;  // Trigger pin for ultrasonic sensor
-const int echoPin = 12;  // Echo pin for ultrasonic sensor
-const int servoPin = 10; // Servo motor pin for ultrasonic scanning
+// =================== ULTRASONIC SENSOR ===================
+const int trigPin = 13;  // Ultrasonic sensor trigger pin
+const int echoPin = 12;  // Ultrasonic sensor echo pin
+const int servoPin = 10; // Servo pin for ultrasonic scanning
 
-// =================== SERVO ===================
-Servo usServo;            // Servo for ultrasonic sensor
+// =================== Servo CONTROL ======================
+Servo usServo;  // Servo object for ultrasonic scanning
 
-// =================== SPEED CONTROL ===================
-int speedValue = 80;         // Default speed for motors
-const int speedStep = 10;    // Increment/decrement step for speed
-const int defaultVictoryLapSpeed = 120; // Speed during Victory Lap mode
+// =================== SPEED CONTROL ======================
+int speedValue = 80;           // Default speed
+const int speedStep = 10;      // Step for increasing/decreasing speed
+const int defaultVictoryLapSpeed = 120;  // Speed for victory lap
 
-// =================== STATE MEMORY ===================
-String lastDirection = "FORWARD"; // Last motor direction
-bool isStopped = false;           // Flag to indicate if robot is stopped
+// =================== STATE MEMORY =======================
+String lastDirection = "FORWARD";  // Last movement direction
+bool isStopped = false;            // Flag for stop state
 
-// =================== MODES ===================
-int currentMode = 0;  // Robot modes: 0 = IR, 1 = Line Follow, 2 = Object Avoidance, 3 = Victory Lap
+// =================== MODES ==============================
+int currentMode = 0;  // Current mode: 0 = IR, 1 = Line Follow, 2 = Object Avoidance, 3 = Victory Lap
 
-// =================== IR CODES ===================
+// =================== IR CODES ===========================
 #define FORWARD_CODE    0xB946FF00
 #define RIGHT_CODE      0xBC43FF00
 #define LEFT_CODE       0xBB44FF00
@@ -52,12 +49,12 @@ int currentMode = 0;  // Robot modes: 0 = IR, 1 = Line Follow, 2 = Object Avoida
 #define STOP_CODE       0xBF40FF00
 #define MODE_BUTTON     0xBD42FF00
 
-// =================== THRESHOLDS ===================
-const int LINE_THRESHOLD = 500;   // Threshold for line sensor to detect black line
-const int AIR_THRESHOLD  = 900;   // Threshold for detecting in-air condition (no surface)
-const int SAFE_DISTANCE  = 30;    // Minimum safe distance in cm for object avoidance
+// =================== THRESHOLDS ========================
+const int LINE_THRESHOLD = 500;  // Threshold for line detection
+const int AIR_THRESHOLD  = 900;  // Threshold for detecting “in-air” (lost line)
+const int SAFE_DISTANCE  = 30;   // Minimum safe distance for object avoidance (cm)
 
-// =================== FUNCTION PROTOTYPES ===================
+// =================== FUNCTION PROTOTYPES ================
 void Mode_IR();
 void Mode_LineFollow();
 void Mode_ObjectAvoidance();
@@ -75,32 +72,32 @@ void searchForLine();
 bool readLineSensors();
 int measureAt(int angle);
 int getDistance();
-void setModeColor(int mode);  
+void setModeColor(int mode);  // Set RGB LED color according to mode
 
-// =================== SETUP ===================
+// =================== SETUP =============================
 void setup() {
-  Serial.begin(9600);  // Initialize serial communication for debugging
+  Serial.begin(9600);  // Initialize serial monitor
 
-  // Motor pins setup
+  // Motor driver pin setup
   pinMode(PWMA, OUTPUT);
   pinMode(PWMB, OUTPUT);
   pinMode(AIN1, OUTPUT);
   pinMode(AIN2, OUTPUT);
   pinMode(STANDBY, OUTPUT);
-  digitalWrite(STANDBY, HIGH); // Enable motor driver
+  digitalWrite(STANDBY, HIGH);  // Activate motor driver
 
-  // Line sensors setup
+  // Line sensor pin setup
   pinMode(LINE_TRACKING_R, INPUT);
   pinMode(LINE_TRACKING_M, INPUT);
   pinMode(LINE_TRACKING_L, INPUT);
 
-  // Ultrasonic sensor setup
+  // Ultrasonic sensor pin setup
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
 
   // Attach servo for ultrasonic scanning
   usServo.attach(servoPin);
-  usServo.write(90); // Center position
+  usServo.write(90);  // Initialize at center
   delay(500);
 
   // Initialize IR receiver
@@ -108,27 +105,35 @@ void setup() {
 
   // Initialize LED strip
   strip.begin();
-  strip.show(); // Turn off initially
-  strip.setPixelColor(0, strip.Color(0, 0, 255)); // Default mode = Blue
+  strip.show();  // Turn off LED initially
+  strip.setPixelColor(0, strip.Color(0, 0, 255)); // Default mode 0 = Blue
   strip.show();
-  setModeColor(currentMode);
+  setModeColor(currentMode);  // Set LED color for current mode
 
   Serial.println("IR + Line Follow + Object Avoidance + Victory Lap Ready");
 }
 
-// =================== MAIN LOOP ===================
+// =================== LOOP ==============================
 void loop() {
+  // Main loop selects behavior according to current mode
   switch (currentMode) {
-    case 0: Mode_IR(); break;
-    case 1: Mode_LineFollow(); break;
-    case 2: Mode_ObjectAvoidance(); break;
-    case 3: VictoryLap(); break;
+    case 0:
+      Mode_IR();  // Remote control mode
+      break;
+    case 1:
+      Mode_LineFollow();  // Line following mode
+      break;
+    case 2:
+      Mode_ObjectAvoidance();  // Obstacle avoidance mode
+      break;
+    case 3:
+      VictoryLap();  // Pre-programmed victory lap
+      break;
   }
 }
 
-// =================== MOTOR CONTROL FUNCTIONS ===================
-
-// Move forward
+// =================== MOTOR FUNCTIONS ===================
+// Forward movement
 void Forward(byte speed) {
   digitalWrite(AIN1, HIGH);
   digitalWrite(AIN2, HIGH);
@@ -137,7 +142,7 @@ void Forward(byte speed) {
   digitalWrite(STANDBY, HIGH);
 }
 
-// Move backward
+// Backward movement
 void Backward(byte speed) {
   digitalWrite(AIN1, LOW);
   digitalWrite(AIN2, LOW);
@@ -171,25 +176,23 @@ void Stop() {
   digitalWrite(STANDBY, HIGH);
 }
 
-// Apply last known direction (used after speed change)
+// Apply last stored direction (used after speed change)
 void applyLastDirection() {
   if (isStopped) return;
-
   if (lastDirection == "FORWARD") Forward(speedValue);
   else if (lastDirection == "BACKWARD") Backward(speedValue);
   else if (lastDirection == "LEFT") Left(speedValue);
   else if (lastDirection == "RIGHT") Right(speedValue);
 }
 
-// =================== UNIVERSAL IR HANDLER ===================
+// =================== UNIVERSAL IR HANDLER ==============
 bool handleIR() {
-  if (!IrReceiver.decode()) return false; // No IR signal detected
+  if (!IrReceiver.decode()) return false;  // No IR signal
+  unsigned long code = IrReceiver.decodedIRData.decodedRawData;
+  IrReceiver.resume();
 
-  unsigned long code = IrReceiver.decodedIRData.decodedRawData; // Get IR code
-  IrReceiver.resume(); // Prepare for next IR signal
-
-  if (code == 0x0) return false; // Invalid code
-  if (IrReceiver.decodedIRData.flags & IRDATA_FLAGS_IS_REPEAT) return false; // Ignore repeat codes
+  if (code == 0x0) return false;  // Ignore null codes
+  if (IrReceiver.decodedIRData.flags & IRDATA_FLAGS_IS_REPEAT) return false;  // Ignore repeat signals
 
   // STOP command
   if (code == STOP_CODE) {
@@ -199,28 +202,24 @@ bool handleIR() {
     return true;
   }
 
-  // Mode change button
+  // MODE change button
   if (code == MODE_BUTTON) {
-    currentMode = (currentMode + 1) % 4; // Cycle modes
+    currentMode = (currentMode + 1) % 4;
     Stop();
     isStopped = true;
-
-    if (currentMode == 1) speedValue = 65; // Slower for line following
+    if (currentMode == 1) speedValue = 65;
     else speedValue = 80;
-
-    // Debug messages
     Serial.print("Switched to Mode: ");
     if (currentMode == 0) Serial.println("IR");
     else if (currentMode == 1) Serial.println("Line Follow");
     else if (currentMode == 2) Serial.println("Object Avoidance");
     else if (currentMode == 3) Serial.println("Victory Lap");
-
-    setModeColor(currentMode); // Update LED color
+    setModeColor(currentMode);  // Change LED color
     delay(300);
     return true;
   }
 
-  // Directional commands
+  // Movement commands
   if (code == FORWARD_CODE || code == BACKWARD_CODE || code == LEFT_CODE || code == RIGHT_CODE) {
     isStopped = false;
     switch (code) {
@@ -232,7 +231,7 @@ bool handleIR() {
     return true;
   }
 
-  // Speed control
+  // Speed adjustment
   if (code == SPEED_UP_CODE) { speedValue += speedStep; if (speedValue > 255) speedValue = 255; applyLastDirection(); return true; }
   if (code == SPEED_DOWN_CODE) { speedValue -= speedStep; if (speedValue < 0) speedValue = 0; applyLastDirection(); return true; }
 
@@ -240,34 +239,45 @@ bool handleIR() {
 }
 
 // =================== VICTORY LAP ===================
-void VictoryLap() {
-  // Predefined movement sequence for victory lap
-  Forward(80); delay(11750); Stop(); delay(1000);
-  Right(100); delay(430); Stop(); delay(1000);
-  Forward(80); delay(6350); Stop(); delay(1000);
-  Right(100); delay(430); Stop(); delay(1000);
-  Forward(80); delay(11750); Stop(); delay(1000);
-  Right(100); delay(430); Stop(); delay(1000);
-  Forward(80); delay(6350); Stop(); delay(1000);
-  Right(100); delay(430); Stop(); delay(1000);
-
-  currentMode = 0; // Return to IR mode after lap
+void runSegmentForward(int speed, unsigned long duration) {
+  unsigned long start = millis();
+  while (millis() - start < duration) {
+    if (handleIR()) {
+      if (isStopped || currentMode != 3) {
+        Stop();
+        return;
+      }
+    }
+    Forward(speed);
+  }
   Stop();
 }
 
-// =================== LINE FOLLOW FUNCTIONS ===================
+void VictoryLap() {
+  // Pre-programmed sequence of movements
+  Forward(80); delay(11750); Stop(); delay(1000);
+  Right(100); delay(430); Stop(); delay(1000);
+  Forward(80); delay(6350); Stop(); delay(1000);
+  Right(100); delay(430); Stop(); delay(1000);
+  Forward(80); delay(11750); Stop(); delay(1000);
+  Right(100); delay(430); Stop(); delay(1000);
+  Forward(80); delay(6350); Stop(); delay(1000);
+  Right(100); delay(430); Stop(); delay(1000);
+  currentMode = 0;  // Return to IR mode
+  Stop();
+}
+
+// =================== LINE FOLLOW FUNCTIONS =============
 bool readLineSensors() {
-  // Returns true if any sensor detects the line
   int L = analogRead(LINE_TRACKING_L);
   int M = analogRead(LINE_TRACKING_M);
   int R = analogRead(LINE_TRACKING_R);
   return (L > LINE_THRESHOLD || M > LINE_THRESHOLD || R > LINE_THRESHOLD);
 }
 
+// Search for lost line by wiggle movements
 void searchForLine() {
-  // Wiggle to find line when lost
   byte wiggleSpeed = speedValue * 0.4;
-
   if (lastDirection == "RIGHT") Right(wiggleSpeed);
   else if (lastDirection == "LEFT") Left(wiggleSpeed);
   else {Right(wiggleSpeed); delay(150); Left(wiggleSpeed); delay(150); }
@@ -285,20 +295,20 @@ void searchForLine() {
   }
 
   if (!readLineSensors()) {
-    Backward(40); delay(400); // Move backward if line not found
+    Backward(40); delay(400);
   }
 
   Stop();
 }
 
+// Line follow mode
 void Mode_LineFollow() {
-  if (handleIR()) return; // Handle IR inputs
+  if (handleIR()) return;  // Handle remote commands
 
   int L = analogRead(LINE_TRACKING_L);
   int M = analogRead(LINE_TRACKING_M);
   int R = analogRead(LINE_TRACKING_R);
 
-  // Stop if robot is in air
   if (L > AIR_THRESHOLD && M > AIR_THRESHOLD && R > AIR_THRESHOLD) {
     Stop();
     isStopped = true;
@@ -312,22 +322,20 @@ void Mode_LineFollow() {
   bool middleBlack = M > LINE_THRESHOLD;
   bool rightBlack  = R > LINE_THRESHOLD;
 
-  // Follow line based on sensor readings
   if (middleBlack) Forward(60);
   else if (leftBlack) Left(speedValue);
   else if (rightBlack) Right(speedValue);
   else searchForLine();
 
-  delay(50); // Small delay for stability
+  delay(50);
 }
 
-// =================== IR MODE ===================
+// =================== IR MODE ===========================
 void Mode_IR() {
   int L = analogRead(LINE_TRACKING_L);
   int M = analogRead(LINE_TRACKING_M);
   int R = analogRead(LINE_TRACKING_R);
 
-  // Stop if robot is in air
   if (L > AIR_THRESHOLD && M > AIR_THRESHOLD && R > AIR_THRESHOLD) {
     Stop();
     isStopped = true;
@@ -335,32 +343,35 @@ void Mode_IR() {
     return;
   }
 
-  handleIR(); // Handle IR remote commands
+  handleIR();  // Handle remote commands
 }
 
-// =================== OBJECT AVOIDANCE ===================
+// =================== OBJECT AVOIDANCE ==================
 int measureAt(int angle) {
-  usServo.write(angle); // Rotate servo
+  usServo.write(angle);  // Rotate servo
   delay(1000);
-  return getDistance(); // Measure distance
+  return getDistance();
 }
 
+// Measure distance with ultrasonic sensor
 int getDistance() {
-  // Trigger ultrasonic sensor and calculate distance
-  digitalWrite(trigPin, LOW); delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH); delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
 
-  long duration = pulseIn(echoPin, HIGH, 20000);
+  long duration = pulseIn(echoPin, HIGH, 20000);  // Max 20ms timeout
   int distance = duration * 0.034 / 2;
   if (distance == 0 || distance > 300) distance = 300;
   return distance;
 }
 
+// Object avoidance mode
 void Mode_ObjectAvoidance() {
-  if (handleIR()) return; // Handle IR input
+  if (handleIR()) return;
 
-  int distanceForward = measureAt(90);
+  int distanceForward = measureAt(90);  // Check forward
   if (distanceForward > SAFE_DISTANCE) { Forward(speedValue); return; }
 
   Stop(); delay(200);
@@ -373,11 +384,10 @@ void Mode_ObjectAvoidance() {
   usServo.write(90); delay(300);
   if (distanceRight > SAFE_DISTANCE) { Right(speedValue); delay(780); Stop(); return; }
 
-  // If all sides blocked, turn left
   Left(speedValue); delay(1300); Stop();
 }
 
-// =================== LED MODE COLORS ===================
+// =================== COLOR RGB ==================
 void setModeColor(int mode) {
   uint32_t color;
   switch(mode) {
