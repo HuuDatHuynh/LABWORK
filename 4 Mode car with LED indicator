@@ -256,13 +256,13 @@ void runSegmentForward(int speed, unsigned long duration) {
 void VictoryLap() {
   // Pre-programmed sequence of movements
   Forward(80); delay(11750); Stop(); delay(1000);
-  Right(100); delay(430); Stop(); delay(1000);
+  Right(100); delay(680); Stop(); delay(1000);
   Forward(80); delay(6350); Stop(); delay(1000);
-  Right(100); delay(430); Stop(); delay(1000);
+  Right(100); delay(680); Stop(); delay(1000);
   Forward(80); delay(11750); Stop(); delay(1000);
-  Right(100); delay(430); Stop(); delay(1000);
+  Right(100); delay(680); Stop(); delay(1000);
   Forward(80); delay(6350); Stop(); delay(1000);
-  Right(100); delay(430); Stop(); delay(1000);
+  Right(100); delay(680); Stop(); delay(1000);
   currentMode = 0;  // Return to IR mode
   Stop();
 }
