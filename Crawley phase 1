@@ -1,0 +1,18 @@
+  // Movement commands
+  if (code == FORWARD_CODE || code == BACKWARD_CODE || code == LEFT_CODE || code == RIGHT_CODE) {
+    isStopped = false;
+    switch (code) {
+      case FORWARD_CODE: Forward(speedValue); lastDirection = "FORWARD"; break;
+      case BACKWARD_CODE: Backward(speedValue); lastDirection = "BACKWARD"; break;
+      case LEFT_CODE: Left(speedValue); lastDirection = "LEFT"; break;
+      case RIGHT_CODE: Right(speedValue); lastDirection = "RIGHT"; break;
+    }
+    return true;
+  }
+
+  // Speed adjustment
+  if (code == SPEED_UP_CODE) { speedValue += speedStep; if (speedValue > 255) speedValue = 255; applyLastDirection(); return true; }
+  if (code == SPEED_DOWN_CODE) { speedValue -= speedStep; if (speedValue < 0) speedValue = 0; applyLastDirection(); return true; }
+
+  return false;
+}
