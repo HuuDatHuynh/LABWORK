@@ -1,0 +1,50 @@
+#include <IRremote.h>
+
+const int IR_LED_PIN = 3;
+
+// Joystick pins
+const int JOY_X = A0; // horizontal (left/right)
+const int JOY_Y = A1; // vertical (up/down)
+
+// IR codes
+#define UP_CODE    0xFFC000
+#define DOWN_CODE  0xFF2000
+#define LEFT_CODE  0xFF4000
+#define RIGHT_CODE 0xFF8000
+
+IRsend irsend;
+
+void setup() {
+  Serial.begin(9600);
+  irsend.begin(IR_LED_PIN); // initialize IR transmitter
+  Serial.println("IR Joystick transmitter ready");
+}
+
+void loop() {
+  int horizontal = analogRead(JOY_X); // left/right
+  int vertical   = analogRead(JOY_Y); // up/down
+
+  // ------------------ Horizontal ------------------
+  if (horizontal < 400) {            // joystick LEFT
+    irsend.sendNEC(LEFT_CODE, 32);
+    Serial.println("Joystick LEFT");
+    delay(40);
+  } 
+  else if (horizontal > 600) {       // joystick RIGHT
+    irsend.sendNEC(RIGHT_CODE, 32);
+    Serial.println("Joystick RIGHT");
+    delay(40);
+  }
+
+  // ------------------ Vertical ------------------
+  if (vertical < 400) {              // joystick UP
+    irsend.sendNEC(UP_CODE, 32);
+    Serial.println("Joystick UP");
+    delay(40);
+  } 
+  else if (vertical > 600) {         // joystick DOWN
+    irsend.sendNEC(DOWN_CODE, 32);
+    Serial.println("Joystick DOWN");
+    delay(40);
+  }
+}
