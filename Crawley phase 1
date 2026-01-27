@@ -1,18 +1,156 @@
-  // Movement commands
-  if (code == FORWARD_CODE || code == BACKWARD_CODE || code == LEFT_CODE || code == RIGHT_CODE) {
-    isStopped = false;
-    switch (code) {
-      case FORWARD_CODE: Forward(speedValue); lastDirection = "FORWARD"; break;
-      case BACKWARD_CODE: Backward(speedValue); lastDirection = "BACKWARD"; break;
-      case LEFT_CODE: Left(speedValue); lastDirection = "LEFT"; break;
-      case RIGHT_CODE: Right(speedValue); lastDirection = "RIGHT"; break;
+#include <IRremote.h>
+#include <Servo.h>
+
+// ============== IR ==================
+#define IR_RECEIVE_PIN 9
+
+// ---- Joystick IR codes ----
+#define UP_CODE    0x04FF00
+#define DOWN_CODE  0x03FF00
+#define LEFT_CODE  0x02FF00
+#define RIGHT_CODE 0x01FF00
+
+// ---- Car button IR codes ----
+#define FORWARD_CODE    0xB946FF00
+#define BACKWARD_CODE   0xEA15FF00
+#define TURN_LEFT_CODE  0xBB44FF00
+#define TURN_RIGHT_CODE 0xBC43FF00
+#define STOP_CODE       0xBF40FF00
+
+// ============== SERVOS ==============
+#define SERVO_X_PIN 10   // left / right
+#define SERVO_Y_PIN 11   // up / down
+
+Servo servoX;
+Servo servoY;
+
+int servoXPos = 90;
+int servoYPos = 90;
+
+// Nudge settings
+const int NUDGE_STEP = 5;
+const int SMOOTH_DELAY = 10;
+
+// ============== MOTOR PINS ==========
+#define AIN1 7
+#define AIN2 8
+#define PWMA 5
+#define PWMB 6
+#define STANDBY 3
+
+int speedValue = 80;
+
+// ============== SERVO MOVE ==========
+void smoothNudge(Servo &s, int &currentPos, int delta) {
+  int target = constrain(currentPos + delta, 0, 180);
+
+  if (currentPos < target) {
+    for (int p = currentPos; p <= target; p++) {
+      s.write(p);
+      delay(SMOOTH_DELAY);
     }
-    return true;
+  } else {
+    for (int p = currentPos; p >= target; p--) {
+      s.write(p);
+      delay(SMOOTH_DELAY);
+    }
+  }
+  currentPos = target;
+}
+
+// ============== MOTOR FUNCTIONS =====
+void Forward(byte speed) {
+  digitalWrite(AIN1, HIGH);
+  digitalWrite(AIN2, HIGH);
+  analogWrite(PWMA, speed);
+  analogWrite(PWMB, speed);
+}
+
+void Backward(byte speed) {
+  digitalWrite(AIN1, LOW);
+  digitalWrite(AIN2, LOW);
+  analogWrite(PWMA, speed);
+  analogWrite(PWMB, speed);
+}
+
+void Left(byte speed) {
+  digitalWrite(AIN1, HIGH);
+  digitalWrite(AIN2, LOW);
+  analogWrite(PWMA, speed);
+  analogWrite(PWMB, speed);
+}
+
+void Right(byte speed) {
+  digitalWrite(AIN1, LOW);
+  digitalWrite(AIN2, HIGH);
+  analogWrite(PWMA, speed);
+  analogWrite(PWMB, speed);
+}
+
+void StopMotors() {
+  analogWrite(PWMA, 0);
+  analogWrite(PWMB, 0);
+}
+
+// ============== SETUP ===============
+void setup() {
+  Serial.begin(9600);
+
+  servoX.attach(SERVO_X_PIN);
+  servoY.attach(SERVO_Y_PIN);
+  servoX.write(servoXPos);
+  servoY.write(servoYPos);
+
+  pinMode(AIN1, OUTPUT);
+  pinMode(AIN2, OUTPUT);
+  pinMode(PWMA, OUTPUT);
+  pinMode(PWMB, OUTPUT);
+  pinMode(STANDBY, OUTPUT);
+  digitalWrite(STANDBY, HIGH);
+
+  IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);
+
+  Serial.println("IR Servo + Car Control Ready");
+}
+
+// ============== LOOP ================
+void loop() {
+  if (!IrReceiver.decode()) return;
+
+  uint32_t code = IrReceiver.decodedIRData.decodedRawData;
+  IrReceiver.resume();
+
+  Serial.print("IR code: 0x");
+  Serial.println(code, HEX);
+
+  // -------- Servo (joystick) --------
+  if (code == LEFT_CODE) {
+    smoothNudge(servoX, servoXPos, -NUDGE_STEP);
+  }
+  else if (code == RIGHT_CODE) {
+    smoothNudge(servoX, servoXPos, NUDGE_STEP);
+  }
+  else if (code == UP_CODE) {
+    smoothNudge(servoY, servoYPos, -NUDGE_STEP);
+  }
+  else if (code == DOWN_CODE) {
+    smoothNudge(servoY, servoYPos, NUDGE_STEP);
   }
 
-  // Speed adjustment
-  if (code == SPEED_UP_CODE) { speedValue += speedStep; if (speedValue > 255) speedValue = 255; applyLastDirection(); return true; }
-  if (code == SPEED_DOWN_CODE) { speedValue -= speedStep; if (speedValue < 0) speedValue = 0; applyLastDirection(); return true; }
-
-  return false;
+  // -------- Car buttons -------------
+  else if (code == FORWARD_CODE) {
+    Forward(speedValue);
+  }
+  else if (code == BACKWARD_CODE) {
+    Backward(speedValue);
+  }
+  else if (code == TURN_LEFT_CODE) {
+    Left(speedValue);
+  }
+  else if (code == TURN_RIGHT_CODE) {
+    Right(speedValue);
+  }
+  else if (code == STOP_CODE) {
+    StopMotors();
+  }
 }
