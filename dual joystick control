@@ -74,12 +74,12 @@ void loop() {
 
   // -------- Car joystick -------------
   else if (j2y < LOW_TH) {
-    irsend.sendNEC(CAR_FORWARD_CODE, 32);
-    Serial.println("CAR FORWARD");
-  }
-  else if (j2y > HIGH_TH) {
     irsend.sendNEC(CAR_BACKWARD_CODE, 32);
     Serial.println("CAR BACKWARD");
+  }
+  else if (j2y > HIGH_TH) {
+    irsend.sendNEC(CAR_FORWARD_CODE, 32);
+    Serial.println("CAR FORWARD");
   }
   else if (j2x < LOW_TH) {
     irsend.sendNEC(CAR_LEFT_CODE, 32);
