@@ -1,0 +1,97 @@
+#include <IRremote.h>
+
+#define IR_LED_PIN 3
+
+// -------- Joystick 1 (Camera) --------
+#define JOY1_X A0
+#define JOY1_Y A1
+
+// -------- Joystick 2 (Car) -----------
+#define JOY2_X A2
+#define JOY2_Y A3
+
+// -------- Stop Button ---------------
+#define STOP_BUTTON_PIN 4
+
+// -------- Camera IR codes ------------
+#define CAM_UP_CODE     0x04FF00 
+#define CAM_DOWN_CODE   0x03FF00 
+#define CAM_LEFT_CODE   0x02FF00
+#define CAM_RIGHT_CODE  0x01FF00
+
+// -------- Car IR codes ---------------
+#define CAR_FORWARD_CODE   0xFFC23D
+#define CAR_BACKWARD_CODE  0xFF22DD
+#define CAR_LEFT_CODE      0xFF629D
+#define CAR_RIGHT_CODE     0xFFA857
+#define CAR_STOP_CODE      0xFF02FD
+
+IRsend irsend;
+
+// Dead zone thresholds
+const int LOW_TH  = 400;
+const int HIGH_TH = 600;
+
+void setup() {
+  Serial.begin(9600);
+  irsend.begin(IR_LED_PIN);
+  pinMode(STOP_BUTTON_PIN, INPUT_PULLUP);
+  Serial.println("Dual Joystick IR Transmitter with STOP Button Ready");
+}
+
+void loop() {
+  // -------- STOP BUTTON HIGH PRIORITY --------
+  if (digitalRead(STOP_BUTTON_PIN) == LOW) {
+    irsend.sendNEC(CAR_STOP_CODE, 32);
+    Serial.println("CAR STOP (BUTTON)");
+    delay(150);   // debounce + avoid flooding
+    return;       // skip joystick logic
+  }
+
+  // -------- READ JOYSTICKS ----------
+  int j1x = analogRead(JOY1_X);
+  int j1y = analogRead(JOY1_Y);
+  int j2x = analogRead(JOY2_X);
+  int j2y = analogRead(JOY2_Y);
+
+  // -------- Camera joystick ----------
+  if (j1x < LOW_TH) {
+    irsend.sendNEC(CAM_LEFT_CODE, 32);
+    Serial.println("CAM LEFT");
+  }
+  else if (j1x > HIGH_TH) {
+    irsend.sendNEC(CAM_RIGHT_CODE, 32);
+    Serial.println("CAM RIGHT");
+  }
+  else if (j1y < LOW_TH) {
+    irsend.sendNEC(CAM_UP_CODE, 32);
+    Serial.println("CAM UP");
+  }
+  else if (j1y > HIGH_TH) {
+    irsend.sendNEC(CAM_DOWN_CODE, 32);
+    Serial.println("CAM DOWN");
+  }
+
+  // -------- Car joystick -------------
+  else if (j2y < LOW_TH) {
+    irsend.sendNEC(CAR_FORWARD_CODE, 32);
+    Serial.println("CAR FORWARD");
+  }
+  else if (j2y > HIGH_TH) {
+    irsend.sendNEC(CAR_BACKWARD_CODE, 32);
+    Serial.println("CAR BACKWARD");
+  }
+  else if (j2x < LOW_TH) {
+    irsend.sendNEC(CAR_LEFT_CODE, 32);
+    Serial.println("CAR LEFT");
+  }
+  else if (j2x > HIGH_TH) {
+    irsend.sendNEC(CAR_RIGHT_CODE, 32);
+    Serial.println("CAR RIGHT");
+  }
+
+  // -------- If car joystick centered --------
+  // do nothing (no auto STOP)
+  
+  delay(60); // stable IR timing
+}
