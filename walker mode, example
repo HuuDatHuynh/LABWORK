@@ -1,0 +1,155 @@
+#include <Servo.h>
+#include <IRremote.h>
+
+const int RECV_PIN = 2;  // IR receiver pin
+IRrecv irrecv(RECV_PIN);
+decode_results results;
+
+// Servo arrays
+Servo coxa[4];
+Servo femur[4];
+Servo tibia[4];
+
+int posCoxa[4]  = {90,90,90,90};
+int posFemur[4] = {90,90,90,90};
+int posTibia[4] = {90,90,90,90};
+
+// IR Codes
+#define FORWARD_CODE     0xEA15FF00
+#define BACKWARD_CODE    0xBB44FF00
+#define TURN_LEFT_CODE   0xB946FF00
+#define TURN_RIGHT_CODE  0xBC43FF00
+#define STOP_CODE        0xBF40FF00
+
+void setup() {
+  Serial.begin(9600);
+
+  // Attach servos
+  coxa[0].attach(3); femur[0].attach(4); tibia[0].attach(5);
+  coxa[1].attach(6); femur[1].attach(7); tibia[1].attach(8);
+  coxa[2].attach(9); femur[2].attach(10); tibia[2].attach(11);
+  coxa[3].attach(12); femur[3].attach(13); tibia[3].attach(A0);
+
+  // Start IR receiver
+  irrecv.enableIRIn();
+
+  // Start robot in stand-up pose
+  standUpMode();
+}
+
+void loop() {
+  if (irrecv.decode(&results)) {
+    Serial.println(results.value, HEX);
+
+    switch(results.value) {
+      case FORWARD_CODE:
+        moveForward();
+        break;
+      case BACKWARD_CODE:
+        moveBackward();
+        break;
+      case TURN_LEFT_CODE:
+        turnLeft();
+        break;
+      case TURN_RIGHT_CODE:
+        turnRight();
+        break;
+      case STOP_CODE:
+        stopRobot();
+        break;
+    }
+
+    irrecv.resume(); // receive next code
+  }
+}
+
+// --------------------
+// Smooth movement helper
+// --------------------
+void smoothMove(Servo &servo, int &currentPos, int target) {
+  while(currentPos != target){
+    if(currentPos < target) currentPos++;
+    else currentPos--;
+    servo.write(currentPos);
+    delay(10);
+  }
+}
+
+// --------------------
+// Stand-up pose
+// --------------------
+void standUpMode() {
+  for(int i=0;i<4;i++){
+    smoothMove(coxa[i], posCoxa[i], 90);
+    smoothMove(femur[i], posFemur[i], 110);
+    smoothMove(tibia[i], posTibia[i], 75);
+  }
+}
+
+// --------------------
+// Stop robot (hold current position)
+// --------------------
+void stopRobot() {
+  for(int i=0;i<4;i++){
+    smoothMove(femur[i], posFemur[i], posFemur[i]); // maintain position
+    smoothMove(tibia[i], posTibia[i], posTibia[i]);
+  }
+}
+
+// --------------------
+// Move forward (legs one by one)
+// --------------------
+void moveForward() {
+  for(int i=0;i<4;i++){
+    smoothMove(femur[i], posFemur[i], 70);  // lift leg
+    smoothMove(tibia[i], posTibia[i], 60);  // bend
+    smoothMove(coxa[i], posCoxa[i], posCoxa[i]-20); // swing forward
+    smoothMove(femur[i], posFemur[i], 110); // lower
+    smoothMove(tibia[i], posTibia[i], 75);
+    delay(150);
+  }
+}
+
+// --------------------
+// Move backward (legs one by one)
+// --------------------
+void moveBackward() {
+  for(int i=0;i<4;i++){
+    smoothMove(femur[i], posFemur[i], 70);
+    smoothMove(tibia[i], posTibia[i], 60);
+    smoothMove(coxa[i], posCoxa[i], posCoxa[i]+20); // swing backward
+    smoothMove(femur[i], posFemur[i], 110);
+    smoothMove(tibia[i], posTibia[i], 75);
+    delay(150);
+  }
+}
+
+// --------------------
+// Turn left
+// --------------------
+void turnLeft() {
+  for(int i=0;i<4;i++){
+    smoothMove(femur[i], posFemur[i], 70);
+    smoothMove(tibia[i], posTibia[i], 60);
+    if(i==0 || i==3) smoothMove(coxa[i], posCoxa[i], posCoxa[i]+20); // push left
+    else smoothMove(coxa[i], posCoxa[i], posCoxa[i]-20);
+    smoothMove(femur[i], posFemur[i], 110);
+    smoothMove(tibia[i], posTibia[i], 75);
+    delay(150);
+  }
+}
+
+// --------------------
+// Turn right
+// --------------------
+void turnRight() {
+  for(int i=0;i<4;i++){
+    smoothMove(femur[i], posFemur[i], 70);
+    smoothMove(tibia[i], posTibia[i], 60);
+    if(i==0 || i==3) smoothMove(coxa[i], posCoxa[i], posCoxa[i]-20); // push right
+    else smoothMove(coxa[i], posCoxa[i], posCoxa[i]+20);
+    smoothMove(femur[i], posFemur[i], 110);
+    smoothMove(tibia[i], posTibia[i], 75);
+    delay(150);
+  }
+}
