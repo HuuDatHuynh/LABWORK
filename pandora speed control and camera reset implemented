@@ -17,7 +17,7 @@
 #define STOP_CODE        0xBF40FF00
 
 // ---- New buttons ------------------
-#define RESET_CAM_CODE   0xE31CFF00
+#define RESET_CAM_CODE   0xFF38C7
 #define MODE_CAR_CODE    0xFF10EF   // yellow
 #define SPEED_DOWN_CODE  0xFF7A85   // black
 #define SPEED_UP_CODE    0xFF18E7   // white
@@ -32,8 +32,8 @@ Servo servoY;
 int servoXPos = 90;
 int servoYPos = 90;
 
-const int NUDGE_STEP = 1;    // Smaller step for smooth continuous
-const int SMOOTH_DELAY = 10;
+const int NUDGE_STEP = 5;    // Smaller step for smooth continuous
+const int SMOOTH_DELAY = 5;
 
 // ================== MOTOR PINS ==============
 #define AIN1 7
