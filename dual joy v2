@@ -1,0 +1,131 @@
+#include <IRremote.h>
+
+#define IR_LED_PIN 3
+
+// -------- Joysticks --------
+#define JOY1_X A0   // Camera X
+#define JOY1_Y A1   // Camera Y
+#define JOY2_X A2   // Car X
+#define JOY2_Y A3   // Car Y
+
+// -------- Buttons --------
+#define STOP_BUTTON_PIN 4
+#define WALKER_MODE_PIN 5
+#define SPEED_UP_PIN 6
+#define SPEED_DOWN_PIN 7
+#define CAR_MODE_PIN 8
+#define RESET_CAM_PIN 9
+
+// -------- Camera IR codes --------
+#define CAM_UP_CODE     0x04FF00
+#define CAM_DOWN_CODE   0x03FF00
+#define CAM_LEFT_CODE   0x02FF00
+#define CAM_RIGHT_CODE  0x01FF00
+
+// -------- Car IR codes ----------
+#define CAR_FORWARD_CODE   0xFFC23D
+#define CAR_BACKWARD_CODE  0xFF22DD
+#define CAR_LEFT_CODE      0xFF629D
+#define CAR_RIGHT_CODE     0xFFA857
+#define CAR_STOP_CODE      0xFF02FD
+
+// -------- Button IR codes ---------
+#define WALKER_MODE_CODE   0xF30CFF00
+#define SPEED_UP_CODE      0xE718FF00
+#define SPEED_DOWN_CODE    0xA15EFF00
+#define CAR_MODE_CODE      0xF708FF00
+#define RESET_CAM_CODE     0xE31CFF00
+
+IRsend irsend;
+
+// Dead zone thresholds for joystick
+const int LOW_TH = 400;
+const int HIGH_TH = 600;
+
+void setup() {
+  Serial.begin(9600);
+  irsend.begin(IR_LED_PIN);
+
+  // Set all buttons as input_pullup
+  pinMode(STOP_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(WALKER_MODE_PIN, INPUT_PULLUP);
+  pinMode(SPEED_UP_PIN, INPUT_PULLUP);
+  pinMode(SPEED_DOWN_PIN, INPUT_PULLUP);
+  pinMode(CAR_MODE_PIN, INPUT_PULLUP);
+  pinMode(RESET_CAM_PIN, INPUT_PULLUP);
+
+  Serial.println("Dual Joystick IR Controller Ready");
+}
+
+void loop() {
+  // -------- Priority Buttons --------
+  if (digitalRead(STOP_BUTTON_PIN) == LOW) {
+    irsend.sendNEC(CAR_STOP_CODE, 32);
+    Serial.println("CAR STOP");
+  }
+  else if (digitalRead(WALKER_MODE_PIN) == LOW) {
+    irsend.sendNEC(WALKER_MODE_CODE, 32);
+    Serial.println("WALKER MODE");
+  }
+  else if (digitalRead(SPEED_UP_PIN) == LOW) {
+    irsend.sendNEC(SPEED_UP_CODE, 32);
+    Serial.println("CAR SPEED UP");
+  }
+  else if (digitalRead(SPEED_DOWN_PIN) == LOW) {
+    irsend.sendNEC(SPEED_DOWN_CODE, 32);
+    Serial.println("CAR SPEED DOWN");
+  }
+  else if (digitalRead(CAR_MODE_PIN) == LOW) {
+    irsend.sendNEC(CAR_MODE_CODE, 32);
+    Serial.println("CAR MODE");
+  }
+  else if (digitalRead(RESET_CAM_PIN) == LOW) {
+    irsend.sendNEC(RESET_CAM_CODE, 32);
+    Serial.println("RESET CAMERA");
+  }
+  else {
+    // -------- Read Joysticks (camera + car) --------
+    int j1x = analogRead(JOY1_X);
+    int j1y = analogRead(JOY1_Y);
+    int j2x = analogRead(JOY2_X);
+    int j2y = analogRead(JOY2_Y);
+
+    // Camera joystick
+    if (j1x < LOW_TH) {
+      irsend.sendNEC(CAM_LEFT_CODE, 32);
+      Serial.println("CAM LEFT");
+    }
+    else if (j1x > HIGH_TH) {
+      irsend.sendNEC(CAM_RIGHT_CODE, 32);
+      Serial.println("CAM RIGHT");
+    }
+    else if (j1y < LOW_TH) {
+      irsend.sendNEC(CAM_UP_CODE, 32);
+      Serial.println("CAM UP");
+    }
+    else if (j1y > HIGH_TH) {
+      irsend.sendNEC(CAM_DOWN_CODE, 32);
+      Serial.println("CAM DOWN");
+    }
+
+    // Car joystick
+    else if (j2y < LOW_TH) {
+      irsend.sendNEC(CAR_BACKWARD_CODE, 32);
+      Serial.println("CAR BACKWARD");
+    }
+    else if (j2y > HIGH_TH) {
+      irsend.sendNEC(CAR_FORWARD_CODE, 32);
+      Serial.println("CAR FORWARD");
+    }
+    else if (j2x < LOW_TH) {
+      irsend.sendNEC(CAR_LEFT_CODE, 32);
+      Serial.println("CAR LEFT");
+    }
+    else if (j2x > HIGH_TH) {
+      irsend.sendNEC(CAR_RIGHT_CODE, 32);
+      Serial.println("CAR RIGHT");
+    }
+  }
+
+  delay(60); // keep stable IR timing
+}
