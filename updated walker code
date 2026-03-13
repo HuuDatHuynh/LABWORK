@@ -1,0 +1,147 @@
+#include <Servo.h>
+#include <IRremote.hpp>
+
+#define IR_RECEIVE_PIN 2
+
+Servo coxa[4];
+Servo femur[4];
+Servo tibia[4];
+
+// Servo positions
+int posCoxa[4]  = {90,90,90,90};
+int posFemur[4] = {110,110,110,110};
+int posTibia[4] = {75,75,75,75};
+
+// IR remote commands (Tinkercad)
+#define CMD_FORWARD  0x11
+#define CMD_LEFT     0x14
+#define CMD_STOP     0x15
+#define CMD_RIGHT    0x16
+#define CMD_BACKWARD 0x19
+
+// Current robot action
+enum RobotState { STOPPED, FORWARD, BACKWARD, LEFT, RIGHT };
+RobotState currentState = STOPPED;
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("Starting Quadruped Robot...");
+
+  IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);
+  Serial.println("IR Receiver initialized.");
+
+  // Attach servos
+  coxa[0].attach(3);  femur[0].attach(4);  tibia[0].attach(5);
+  coxa[1].attach(6);  femur[1].attach(7);  tibia[1].attach(8);
+  coxa[2].attach(9);  femur[2].attach(10); tibia[2].attach(11);
+  coxa[3].attach(12); femur[3].attach(13); tibia[3].attach(A0);
+
+  standUpMode();
+  Serial.println("Robot in stand-up pose.");
+}
+
+void loop() {
+  // --- Check for IR commands ---
+  if (IrReceiver.decode()) {
+    byte cmd = IrReceiver.decodedIRData.command;
+    Serial.print("Received IR Command: 0x"); Serial.println(cmd, HEX);
+
+    switch(cmd) {
+      case CMD_FORWARD:
+        currentState = FORWARD;
+        Serial.println("State set to FORWARD");
+        break;
+      case CMD_BACKWARD:
+        currentState = BACKWARD;
+        Serial.println("State set to BACKWARD");
+        break;
+      case CMD_LEFT:
+        currentState = LEFT;
+        Serial.println("State set to LEFT");
+        break;
+      case CMD_RIGHT:
+        currentState = RIGHT;
+        Serial.println("State set to RIGHT");
+        break;
+      case CMD_STOP:
+        currentState = STOPPED;
+        Serial.println("State set to STOPPED");
+        stopRobot();
+        break;
+      default:
+        Serial.println("Unknown command");
+        break;
+    }
+
+    IrReceiver.resume();
+  }
+
+  // --- Continuous walking based on current state ---
+  switch(currentState) {
+    case FORWARD: moveForward(); break;
+    case BACKWARD: moveBackward(); break;
+    case LEFT: turnLeft(); break;
+    case RIGHT: turnRight(); break;
+    case STOPPED: /* Do nothing */ break;
+  }
+}
+
+// --- Servo movement helper ---
+void moveServo(int legIndex, int coxaTarget, int femurTarget, int tibiaTarget) {
+  coxa[legIndex].write(coxaTarget);
+  femur[legIndex].write(femurTarget);
+  tibia[legIndex].write(tibiaTarget);
+
+  posCoxa[legIndex] = coxaTarget;
+  posFemur[legIndex] = femurTarget;
+  posTibia[legIndex] = tibiaTarget;
+}
+
+// --- Stand-up pose ---
+void standUpMode() {
+  for(int i=0;i<4;i++) moveServo(i, 90, 110, 75);
+}
+
+// --- Stop ---
+void stopRobot() {
+  for(int i=0;i<4;i++) moveServo(i, posCoxa[i], posFemur[i], posTibia[i]);
+}
+
+// --- Walking functions (move one leg at a time) ---
+void moveForward() {
+  for(int i=0;i<4;i++){
+    moveServo(i, posCoxa[i], 70, 60);  // lift leg
+    delay(100);
+    moveServo(i, posCoxa[i]-20, 110, 75); // swing leg forward
+    delay(100);
+  }
+}
+
+void moveBackward() {
+  for(int i=0;i<4;i++){
+    moveServo(i, posCoxa[i], 70, 60);  // lift leg
+    delay(100);
+    moveServo(i, posCoxa[i]+20, 110, 75); // swing leg backward
+    delay(100);
+  }
+}
+
+void turnLeft() {
+  for(int i=0;i<4;i++){
+    moveServo(i, posCoxa[i], 70, 60);
+    delay(100);
+    if(i==0 || i==3) moveServo(i, posCoxa[i]+20, 110, 75);
+    else moveServo(i, posCoxa[i]-20, 110, 75);
+    delay(100);
+  }
+}
+
+void turnRight() {
+  for(int i=0;i<4;i++){
+    moveServo(i, posCoxa[i], 70, 60);
+    delay(100);
+    if(i==0 || i==3) moveServo(i, posCoxa[i]-20, 110, 75);
+    else moveServo(i, posCoxa[i]+20, 110, 75);
+    delay(100);
+  }
+}
