@@ -7,8 +7,8 @@
 // ---- Camera joystick IR codes ----
 #define UP_CODE     0xFF2000
 #define DOWN_CODE   0xFFC000
-#define LEFT_CODE   0xFF4000
-#define RIGHT_CODE  0xFF8000
+#define LEFT_CODE   0xFF8000
+#define RIGHT_CODE  0xFF4000
 // ---- Car movement codes ----------
 #define TURN_RIGHT_CODE     0xEA15FF00
 #define BACKWARD_CODE    0xBB44FF00
