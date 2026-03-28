@@ -1,0 +1,142 @@
+#include <Servo.h>
+#include <IRremote.hpp>
+
+#define IR_RECEIVE_PIN 2
+
+Servo coxa[4];
+Servo femur[4];
+Servo tibia[4];
+
+// ===== BASE POSITIONS =====
+int baseCoxa[4] = {90, 90, 90, 90};
+int baseFemur = 120;
+int baseTibia = 75;
+
+// ===== IR CODES =====
+#define FORWARD_CODE   0xBC43FF00
+#define BACKWARD_CODE  0xBB44FF00
+#define TURN_LEFT_CODE 0xB946FF00
+#define TURN_RIGHT_CODE 0xEA15FF00
+#define STOP_CODE      0xBF40FF00
+
+#define MODE_WALK_CODE 0xFF30CF
+#define MODE_CAR_CODE   0xFF10EF   // REST
+
+// ===== STATE =====
+enum State { STOPPED, FORWARD, BACKWARD, LEFT, RIGHT };
+State currentState = STOPPED;
+
+enum Mode { REST, WALK };
+Mode currentMode = REST;
+
+// ===== SETUP =====
+void setup() {
+  Serial.begin(9600);
+  IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);
+
+  coxa[0].attach(3);  femur[0].attach(4);  tibia[0].attach(5);
+  coxa[1].attach(6);  femur[1].attach(7);  tibia[1].attach(8);
+  coxa[2].attach(9);  femur[2].attach(10); tibia[2].attach(11);
+  coxa[3].attach(12); femur[3].attach(13); tibia[3].attach(A0);
+
+  restMode();
+}
+
+// ===== LOOP =====
+void loop() {
+
+  if (IrReceiver.decode()) {
+    unsigned long cmd = IrReceiver.decodedIRData.decodedRawData;
+
+    if (cmd == MODE_WALK_CODE) {
+      currentMode = WALK;
+      standUpMode();
+    }
+
+    if (cmd == MODE_CAR_CODE) {
+      currentMode = REST;
+      restMode();
+    }
+
+    if (currentMode == WALK) {
+      if (cmd == FORWARD_CODE) currentState = FORWARD;
+      if (cmd == BACKWARD_CODE) currentState = BACKWARD;
+      if (cmd == TURN_LEFT_CODE) currentState = LEFT;
+      if (cmd == TURN_RIGHT_CODE) currentState = RIGHT;
+      if (cmd == STOP_CODE) currentState = STOPPED;
+    }
+
+    IrReceiver.resume();
+  }
+
+  if (currentMode == WALK) {
+    switch(currentState) {
+      case FORWARD: moveForward(); break;
+      case BACKWARD: moveBackward(); break;
+      case LEFT: turnLeft(); break;
+      case RIGHT: turnRight(); break;
+      case STOPPED: break;
+    }
+  }
+}
+
+// ===== SERVO FUNCTION =====
+void moveServo(int leg, int c, int f, int t) {
+  coxa[leg].write(c);
+  femur[leg].write(f);
+  tibia[leg].write(t);
+}
+
+// ===== MODES =====
+void standUpMode() {
+  for(int i=0;i<4;i++){
+    moveServo(i, baseCoxa[i], baseFemur, baseTibia);
+  }
+}
+
+void restMode() {
+  for(int i=0;i<4;i++){
+    moveServo(i, 90, 90, 90);
+  }
+}
+
+// ===== 2-SERVO WALK (DIAGONAL SHIFT) =====
+void moveForward() {
+
+  // Pair 1: FL (0) + BR (3)
+  moveServo(0, baseCoxa[0], baseFemur + 10, baseTibia + 10);
+  moveServo(3, baseCoxa[3], baseFemur + 10, baseTibia + 10);
+  delay(120);
+
+  moveServo(0, baseCoxa[0] - 10, baseFemur, baseTibia);
+  moveServo(3, baseCoxa[3] - 10, baseFemur, baseTibia);
+  delay(120);
+
+
+  // Pair 2: FR (1) + BL (2)
+  moveServo(1, baseCoxa[1], baseFemur + 10, baseTibia + 10);
+  moveServo(2, baseCoxa[2], baseFemur + 10, baseTibia + 10);
+  delay(120);
+
+  moveServo(1, baseCoxa[1] - 10, baseFemur, baseTibia);
+  moveServo(2, baseCoxa[2] - 10, baseFemur, baseTibia);
+  delay(120);
+}
+
+// ===== BACKWARD =====
+void moveBackward() {
+  moveForward();
+}
+
+// ===== TURN =====
+void turnLeft() {
+  moveServo(0, baseCoxa[0] - 10, baseFemur + 10, baseTibia + 10);
+  moveServo(3, baseCoxa[3] + 10, baseFemur + 10, baseTibia + 10);
+  delay(150);
+}
+
+void turnRight() {
+  moveServo(1, baseCoxa[1] - 10, baseFemur + 10, baseTibia + 10);
+  moveServo(2, baseCoxa[2] + 10, baseFemur + 10, baseTibia + 10);
+  delay(150);
+}
